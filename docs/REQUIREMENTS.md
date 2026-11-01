@@ -54,4 +54,8 @@ Real-time collaboration, cloud storage, accounts, sharing, subscriptions, AI, bi
 
 ## Milestone 0
 
-The repository builds, the page is a three-region shell plus a status strip, tooling and CI exist, and these docs match the code. The shell does not open projects or compile documents.
+The repository builds, the page is a three-region shell plus a status strip, tooling and CI exist, and these docs match the code.
+
+## Milestone 1
+
+The user can open a local directory in Chrome or Edge, browse its tree, edit text sources in Monaco, save explicitly, and preview an existing PDF. Still no compilation.

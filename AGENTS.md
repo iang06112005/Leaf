@@ -2,7 +2,7 @@
 
 Read this file before any other work in the repository.
 
-TexFlow is a local-first LaTeX IDE. A project is an ordinary directory of files. The app should eventually edit those files and compile them with the TeX distribution already installed on the machine. Milestone 0 only provides the repository, a browser shell, and the tooling around them.
+TexFlow is a local-first LaTeX IDE. A project is an ordinary directory of files. The app should eventually edit those files and compile them with the TeX distribution already installed on the machine. Milestone 1 provides a browser workspace: open a local folder, explore it, edit with Monaco, and preview an existing PDF.
 
 The Git repository may be named Leaf. The product name is TexFlow. Do not rename either unless asked.
 
@@ -31,18 +31,17 @@ Create a directory when it holds real code. Do not add empty modules for the com
 
 ## Scope right now
 
-Milestone 0 is the web foundation. The page is a placeholder: project sidebar, editor, preview, and a status strip. It does not open files.
+Milestone 1 is the workspace. Open a local folder (Chrome/Edge), list files, edit text sources in Monaco, Save explicitly, and preview a project PDF with PDF.js.
 
 Do not implement, in this milestone or "while you are here":
 
-- opening, reading, or writing project files
-- Monaco, PDF.js, or a diagnostics panel
 - TeX detection, latexmk, log parsing, or SyncTeX
+- diagnostics panel driven by a compiler
 - settings, autosave, or file watching
 - accounts, cloud sync, collaboration, sharing, subscriptions, or AI
 - a desktop shell or a background service
 
-Later milestones are specified in [docs/ROADMAP.md](docs/ROADMAP.md) so the boundaries stay stable. Implement only the milestone you were asked for.
+Later milestones are specified in [docs/ROADMAP.md](docs/ROADMAP.md). Implement only the milestone you were asked for.
 
 ## Commands
 
@@ -82,7 +81,8 @@ A substantial technical decision goes in `docs/decisions/` as a numbered ADR bef
 ## Hard rules
 
 - A project is the directory the user opened. Do not invent a project database or a proprietary format.
-- Do not write into that directory except for an explicit user action. Autosave, when it exists, has to be that action and has to be visible.
+- Do not write into that directory except for an explicit user action. Save is that action today. Autosave, when it exists, has to be that action and has to be visible.
+- Open project uses the File System Access API. See [docs/decisions/0004-open-project-file-system-access.md](docs/decisions/0004-open-project-file-system-access.md).
 - Paths may contain spaces and non-ASCII characters. Handle both.
 - Compiler arguments, when they exist, are a structured list. Never send a shell command string from the page to a shell.
 - shell-escape stays off unless the user turns it on, and the UI must warn when it is on.

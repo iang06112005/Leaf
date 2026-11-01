@@ -8,4 +8,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Milestone 0 foundation: browser shell (project, editor, preview, status), documentation, formatting, linting, unit tests, and CI.
+- Milestone 1 workspace: open a local folder (File System Access API), project tree, Monaco editor with explicit Save, and PDF.js preview for existing PDFs.
+- Milestone 0 foundation: browser shell, documentation, formatting, linting, unit tests, and CI.

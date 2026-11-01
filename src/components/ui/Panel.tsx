@@ -15,7 +15,9 @@ export function Panel({ title, icon: Icon, className, children }: PanelProps) {
         <Icon className="size-3.5" aria-hidden="true" />
         {title}
       </header>
-      <div className="min-h-0 flex-1 overflow-auto p-3 text-sm text-zinc-300">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 text-sm text-zinc-300">
+        {children}
+      </div>
     </section>
   );
 }

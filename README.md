@@ -4,7 +4,7 @@ Local-first LaTeX IDE. A project is an ordinary directory. TexFlow does not requ
 
 The Git repository may be named Leaf. The application name is TexFlow.
 
-Milestone 0 is a web application: a browser shell, documentation, and development tooling. Opening a project, editing, compiling, and PDF preview are later milestones. See [docs/ROADMAP.md](docs/ROADMAP.md).
+This branch includes Milestone 0 and Milestone 1: a browser workspace that opens a local folder, edits sources in Monaco, and previews an existing PDF. Compiling with TeX is Milestone 2. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## License
 
@@ -34,15 +34,15 @@ Agents start at [AGENTS.md](AGENTS.md).
 
 From the repository root, after `npm install`:
 
-| Command                | What it does                             |
-| ---------------------- | ---------------------------------------- |
-| `npm run dev`          | Start the app at <http://127.0.0.1:5173> |
-| `npm test`             | Unit tests                               |
-| `npm run lint`         | ESLint                                   |
-| `npm run typecheck`    | TypeScript                               |
-| `npm run format:check` | Prettier                                 |
-| `npm run build`        | Production build in `dist/`              |
-| `./scripts/check.sh`   | The same checks CI runs                  |
+| Command                | What it does                                                           |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `npm run dev`          | Start the app at <http://127.0.0.1:5173> (Chrome/Edge to open folders) |
+| `npm test`             | Unit tests                                                             |
+| `npm run lint`         | ESLint                                                                 |
+| `npm run typecheck`    | TypeScript                                                             |
+| `npm run format:check` | Prettier                                                               |
+| `npm run build`        | Production build in `dist/`                                            |
+| `./scripts/check.sh`   | The same checks CI runs                                                |
 
 ## Layout
 

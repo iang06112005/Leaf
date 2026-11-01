@@ -2,8 +2,6 @@
 
 ## What runs today
 
-From the repository root:
-
 ```bash
 npm test
 npm run lint
@@ -12,22 +10,30 @@ npm run build
 npm run format:check
 ```
 
-Vitest (`vitest run`, node environment) covers `src/appLabel.test.ts`: the status label is the product name plus the `package.json` version.
+Vitest covers:
 
-`./scripts/check.sh` runs the same list as `.github/workflows/ci.yml`.
+- `src/appLabel.test.ts`
+- `src/services/paths.test.ts` — spaces and non-ASCII segments
+- `src/services/fileKinds.test.ts`
+- `src/services/filesystem.test.ts` — preferred `main.tex` / `main.pdf`
+
+`./scripts/check.sh` matches `.github/workflows/ci.yml`.
+
+## Manual checks for the workspace
+
+In Chrome or Edge:
+
+1. `npm run dev` → http://127.0.0.1:5173
+2. Open folder → pick `tests/fixtures/minimal` (or any folder with `.tex` / `.pdf`)
+3. Confirm the tree lists files, Monaco shows `main.tex`, Save writes only after you click Save
+4. If a PDF is present, the preview renders page 1; otherwise click a `.pdf` in the tree
+
+Firefox and Safari should show that Open folder is unsupported. That is expected.
 
 ## Fixture
 
-`tests/fixtures/minimal/main.tex` is a normal one-file LaTeX document in a normal directory. It is not a TexFlow project format. Nothing in Milestone 0 reads it. Milestone 2 needs real documents (images, bibliographies, multi-pass); this file is only a placeholder path so that later tests have an obvious starting point.
+`tests/fixtures/minimal/main.tex` is a normal one-file LaTeX document. It is not a TexFlow project format. Milestone 2 still needs real multi-file documents for compilation tests.
 
 ## Not running yet
 
-Playwright is not installed, and there is no Playwright config. Browser downloads are large and are not required to prove this foundation. Add Playwright when the workspace can be driven for real, and cover:
-
-- the page renders the project, editor, preview, and status regions
-- opening a temporary project directory once that exists
-- jumping from a diagnostic to source once compilation exists
-
-Until then, keep Vitest on pure behavior. Opening the dev server and reading the four regions is a manual check, not a substitute for a regression suite.
-
-Do not claim the page loads, or that a document compiles, unless that run happened.
+Playwright is not installed. Add it when the open/edit/preview loop needs regression coverage in CI. Do not claim compilation works — it does not exist yet.

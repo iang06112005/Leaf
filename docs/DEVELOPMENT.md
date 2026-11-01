@@ -4,13 +4,10 @@
 
 - Node.js 22 or newer
 - npm
-- A current browser
-
-TeX Live is not required for Milestone 0. There is no Rust toolchain and no WebKitGTK dependency.
+- Chrome or Edge to open a local project folder (File System Access API)
+- TeX Live is not required until Milestone 2
 
 ## Install
-
-From the repository root:
 
 ```bash
 npm install
@@ -22,7 +19,7 @@ npm install
 npm run dev
 ```
 
-Open <http://127.0.0.1:5173>. The dev server binds that address and port, and it fails if the port is already taken.
+Open http://127.0.0.1:5173. The server binds that address and fails if the port is taken.
 
 `npm run build` writes `dist/`. `npm run preview` serves that build.
 
@@ -32,8 +29,8 @@ Open <http://127.0.0.1:5173>. The dev server binds that address and port, and it
 ./scripts/check.sh
 ```
 
-Or the individual commands in [../AGENTS.md](../AGENTS.md). On Windows, run those commands directly if bash is unavailable. `scripts/check.sh` is the bash form of `.github/workflows/ci.yml`.
+## Open a project
 
-## Version
+Use **Open folder** and choose any ordinary directory. The sample at `tests/fixtures/minimal` is enough to see the editor. Add a PDF to that folder if you want the preview without compiling.
 
-The status strip reads `version` from `package.json`. The unit test expects `0.1.0` until that field changes.
+Writes only happen when you click **Save**.

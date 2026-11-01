@@ -15,11 +15,13 @@ No project open, no editor engine, no PDF, no compiler, no desktop shell.
 
 ## Milestone 1 — Workspace
 
-- Shell behavior beyond the placeholder.
+Implemented on the foundation branch.
+
+- Shell beyond the placeholder.
 - Project explorer.
-- Open a local project directory from the browser. Choose the mechanism in an ADR first.
-- Monaco editor.
-- PDF.js viewer.
+- Open a local project directory via the File System Access API ([ADR 0004](decisions/0004-open-project-file-system-access.md)).
+- Monaco editor with explicit Save.
+- PDF.js viewer for existing project PDFs.
 
 Still no compilation.
 

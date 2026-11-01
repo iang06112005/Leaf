@@ -7,7 +7,8 @@ TexFlow will edit local files and, later, start local TeX processes. The threat 
 - The Milestone 0 app is a static shell. It has no server, no accounts, no tokens, no telemetry, and no network calls of its own.
 - No secret store. Do not commit credentials. `.env` and `.env.*` are gitignored.
 - The dev server exists only for development. The production build is static files.
-- Nothing reads or writes the user's disk.
+- Project access uses the File System Access API after the user picks a folder. There is no upload to a server.
+- Writes happen only when the user clicks Save.
 
 ## Projects and writes
 

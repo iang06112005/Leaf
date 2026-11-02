@@ -1,0 +1,202 @@
+import { useWorkspace } from "../workspace/useWorkspace";
+
+export function SettingsModal() {
+  const { settingsOpen, setSettingsOpen, settings, updateSettings, texStatus, refreshTexStatus } =
+    useWorkspace();
+
+  if (!settingsOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div
+        role="dialog"
+        aria-label="Settings"
+        className="max-h-[90vh] w-full max-w-xl overflow-auto rounded border border-[var(--tf-border)] bg-[var(--tf-panel)] p-4 text-sm text-[var(--tf-text)] shadow-xl"
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold">Settings</h2>
+          <button
+            type="button"
+            className="rounded px-2 py-1 text-[var(--tf-muted)] hover:bg-[var(--tf-accent)]"
+            onClick={() => setSettingsOpen(false)}
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <label className="block space-y-1">
+            <span className="text-[var(--tf-muted)]">Theme</span>
+            <select
+              className="w-full rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-2 py-1.5"
+              value={settings.theme}
+              onChange={(event) =>
+                updateSettings({ theme: event.target.value as "dark" | "light" })
+              }
+            >
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-[var(--tf-muted)]">TeX bin directory (optional)</span>
+            <input
+              className="w-full rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-2 py-1.5"
+              value={settings.texBinDir}
+              placeholder="e.g. C:\\texlive\\2024\\bin\\windows"
+              onChange={(event) => updateSettings({ texBinDir: event.target.value })}
+              onBlur={() => {
+                void refreshTexStatus();
+              }}
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-[var(--tf-muted)]">Default root file</span>
+            <input
+              className="w-full rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-2 py-1.5"
+              value={settings.rootFile}
+              onChange={(event) => updateSettings({ rootFile: event.target.value })}
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-[var(--tf-muted)]">Output directory (optional)</span>
+            <input
+              className="w-full rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-2 py-1.5"
+              value={settings.outputDir}
+              placeholder="build"
+              onChange={(event) => updateSettings({ outputDir: event.target.value })}
+            />
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={settings.autosave}
+              onChange={(event) => updateSettings({ autosave: event.target.checked })}
+            />
+            Autosave open files
+          </label>
+
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={settings.compileOnSave}
+              onChange={(event) => updateSettings({ compileOnSave: event.target.checked })}
+            />
+            <span>
+              Compile on save
+              <span className="mt-1 block text-xs text-[var(--tf-muted)]">
+                Off by default. After a `.tex` save (including autosave), start a build if idle.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={settings.cleanAuxBeforeCompile}
+              onChange={(event) => updateSettings({ cleanAuxBeforeCompile: event.target.checked })}
+            />
+            <span>
+              Clean aux before compile
+              <span className="mt-1 block text-xs text-[var(--tf-muted)]">
+                Off by default. Deletes TeX auxiliaries (keeps PDF) right before each build.
+              </span>
+            </span>
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-[var(--tf-muted)]">Autosave delay (ms)</span>
+            <input
+              type="number"
+              min={200}
+              className="w-full rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-2 py-1.5"
+              value={settings.autosaveDelayMs}
+              onChange={(event) =>
+                updateSettings({ autosaveDelayMs: Number(event.target.value) || 800 })
+              }
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-[var(--tf-muted)]">Editor font size</span>
+            <input
+              type="number"
+              min={10}
+              max={28}
+              className="w-full rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-2 py-1.5"
+              value={settings.editorFontSize}
+              onChange={(event) =>
+                updateSettings({ editorFontSize: Number(event.target.value) || 14 })
+              }
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="text-[var(--tf-muted)]">PDF scale</span>
+            <input
+              type="number"
+              min={0.5}
+              max={3}
+              step={0.1}
+              className="w-full rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-2 py-1.5"
+              value={settings.pdfScale}
+              onChange={(event) => updateSettings({ pdfScale: Number(event.target.value) || 1.25 })}
+            />
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={settings.synctex}
+              onChange={(event) => updateSettings({ synctex: event.target.checked })}
+            />
+            Request SyncTeX from latexmk (-synctex=1)
+          </label>
+
+          <label className="flex items-start gap-2 rounded border border-amber-900/60 bg-amber-950/30 p-2">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={settings.shellEscape}
+              onChange={(event) => updateSettings({ shellEscape: event.target.checked })}
+            />
+            <span>
+              Enable shell-escape
+              <span className="mt-1 block text-amber-100/90">
+                Warning: TeX may run external programs. Leave this off unless a package requires it.
+              </span>
+            </span>
+          </label>
+
+          <div className="rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] p-2 text-[var(--tf-muted)]">
+            <p className="font-medium text-[var(--tf-text)]">TeX detection</p>
+            {texStatus?.ok ? (
+              <p>
+                Found latexmk: <code>{texStatus.latexmk}</code>
+                {texStatus.version ? ` (${texStatus.version})` : ""}
+              </p>
+            ) : (
+              <p className="text-amber-200">
+                {texStatus?.installHint ??
+                  "Start the companion (`npm run companion`) and install TeX Live so latexmk is on PATH."}
+              </p>
+            )}
+            {texStatus ? (
+              <p className="mt-1 text-xs">
+                Engines: pdflatex {texStatus.engines.pdflatex ? "✓" : "✗"}, xelatex{" "}
+                {texStatus.engines.xelatex ? "✓" : "✗"}, lualatex{" "}
+                {texStatus.engines.lualatex ? "✓" : "✗"}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

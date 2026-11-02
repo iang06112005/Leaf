@@ -1,4 +1,5 @@
 export type Engine = "pdflatex" | "xelatex" | "lualatex";
+export type ThemeMode = "dark" | "light";
 
 export type AppSettings = {
   texBinDir: string;
@@ -13,6 +14,8 @@ export type AppSettings = {
   shellEscape: boolean;
   synctex: boolean;
   lastProjectPath: string;
+  recentProjects: string[];
+  theme: ThemeMode;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -28,6 +31,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   shellEscape: false,
   synctex: true,
   lastProjectPath: "",
+  recentProjects: [],
+  theme: "dark",
 };
 
 const KEY = "texflow.settings.v1";
@@ -36,7 +41,12 @@ export function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw) as Partial<AppSettings>;
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      recentProjects: Array.isArray(parsed.recentProjects) ? parsed.recentProjects : [],
+    };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
@@ -44,4 +54,16 @@ export function loadSettings(): AppSettings {
 
 export function saveSettings(settings: AppSettings): void {
   localStorage.setItem(KEY, JSON.stringify(settings));
+}
+
+export function pushRecentProject(settings: AppSettings, projectPath: string): AppSettings {
+  const next = [
+    projectPath,
+    ...settings.recentProjects.filter((item) => item !== projectPath),
+  ].slice(0, 8);
+  return {
+    ...settings,
+    lastProjectPath: projectPath,
+    recentProjects: next,
+  };
 }

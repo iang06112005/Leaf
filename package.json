@@ -20,7 +20,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit --pretty false",
     "lint": "eslint . --max-warnings 0",
-    "test": "vitest run && node --test companion/lib/tex.test.mjs",
+    "test": "vitest run && node --test companion/lib/tex.test.mjs companion/lib/synctex.test.mjs",
     "test:compile": "node scripts/compile-smoke.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

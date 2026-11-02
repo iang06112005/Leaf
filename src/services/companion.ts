@@ -183,3 +183,63 @@ export function streamCompile(
 
   return () => source.close();
 }
+
+export function pickProject() {
+  return request<{ path: string; name: string; tree: CompanionTreeNode[] }>("/api/project/pick", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function openPdfInOs(body: { path?: string; file?: string; absolutePath?: string }) {
+  return request<{ ok: boolean; path: string }>("/api/pdf/open", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export type SynctexForwardResult = {
+  page: number;
+  x: number | null;
+  y: number | null;
+  h: number | null;
+  v: number | null;
+  width: number | null;
+  height: number | null;
+};
+
+export type SynctexInverseResult = {
+  file: string;
+  line: number;
+  column: number;
+};
+
+export function synctexForward(body: {
+  path: string;
+  texRelative: string;
+  pdfRelative: string;
+  line: number;
+  column?: number;
+  outputDir?: string | null;
+  texBinDir?: string | null;
+}) {
+  return request<SynctexForwardResult>("/api/synctex/forward", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function synctexInverse(body: {
+  path: string;
+  pdfRelative: string;
+  page: number;
+  x: number;
+  y: number;
+  outputDir?: string | null;
+  texBinDir?: string | null;
+}) {
+  return request<SynctexInverseResult>("/api/synctex/inverse", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}

@@ -37,7 +37,7 @@ export function StatusBar() {
   return (
     <footer
       aria-label="Status"
-      className="flex h-full items-center justify-between gap-3 border-t border-zinc-800 bg-zinc-900 px-3 text-xs text-zinc-400"
+      className="flex h-full items-center justify-between gap-3 border-t border-[var(--tf-border)] bg-[var(--tf-panel)] px-3 text-xs text-[var(--tf-muted)]"
     >
       <span className="truncate">{message ?? readyLabel}</span>
       <span className="truncate">{projectLabel}</span>

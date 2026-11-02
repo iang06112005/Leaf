@@ -9,10 +9,11 @@ import { StatusBar } from "./StatusBar";
 import { Toolbar } from "./Toolbar";
 
 export function AppShell() {
-  const { sidebarCollapsed } = useWorkspace();
+  const { sidebarCollapsed, compile, saveOpenFile, saveAll, buildState, stopCompile } =
+    useWorkspace();
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [previewWidth, setPreviewWidth] = useState(420);
-  const [diagHeight, setDiagHeight] = useState(200);
+  const [diagHeight, setDiagHeight] = useState(220);
   const dragging = useRef<"sidebar" | "preview" | "diag" | null>(null);
 
   const onMouseMove = useCallback((event: MouseEvent) => {
@@ -23,7 +24,7 @@ export function AppShell() {
       setPreviewWidth(Math.min(640, Math.max(260, fromRight)));
     } else if (dragging.current === "diag") {
       const fromBottom = window.innerHeight - event.clientY - 28;
-      setDiagHeight(Math.min(420, Math.max(120, fromBottom)));
+      setDiagHeight(Math.min(480, Math.max(120, fromBottom)));
     }
   }, []);
 
@@ -40,12 +41,30 @@ export function AppShell() {
     };
   }, [onMouseMove, onMouseUp]);
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const meta = event.metaKey || event.ctrlKey;
+      if (meta && event.key === "Enter") {
+        event.preventDefault();
+        if (buildState === "running") void stopCompile();
+        else void compile();
+      }
+      if (meta && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        if (event.shiftKey) void saveAll();
+        else void saveOpenFile();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [buildState, compile, saveAll, saveOpenFile, stopCompile]);
+
   const mainColumns = sidebarCollapsed
     ? `minmax(0,1fr) 6px ${previewWidth}px`
     : `${sidebarWidth}px 6px minmax(0,1fr) 6px ${previewWidth}px`;
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-[2.75rem_minmax(0,1fr)_1.75rem] bg-zinc-950 text-zinc-100 antialiased">
+    <div className="grid h-full min-h-0 grid-rows-[2.75rem_minmax(0,1fr)_1.75rem] bg-[var(--tf-bg)] text-[var(--tf-text)] antialiased">
       <Toolbar />
       <div
         className="grid min-h-0"
@@ -57,7 +76,7 @@ export function AppShell() {
             <div
               role="separator"
               aria-orientation="vertical"
-              className="cursor-col-resize bg-zinc-900 hover:bg-zinc-700"
+              className="cursor-col-resize bg-[var(--tf-panel)] hover:bg-[var(--tf-accent)]"
               onMouseDown={() => {
                 dragging.current = "sidebar";
               }}
@@ -67,7 +86,7 @@ export function AppShell() {
           <div
             role="separator"
             aria-orientation="vertical"
-            className="cursor-col-resize bg-zinc-900 hover:bg-zinc-700"
+            className="cursor-col-resize bg-[var(--tf-panel)] hover:bg-[var(--tf-accent)]"
             onMouseDown={() => {
               dragging.current = "preview";
             }}
@@ -77,7 +96,7 @@ export function AppShell() {
         <div
           role="separator"
           aria-orientation="horizontal"
-          className="cursor-row-resize bg-zinc-900 hover:bg-zinc-700"
+          className="cursor-row-resize bg-[var(--tf-panel)] hover:bg-[var(--tf-accent)]"
           onMouseDown={() => {
             dragging.current = "diag";
           }}

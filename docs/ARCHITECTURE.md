@@ -8,8 +8,9 @@ Vite UI (127.0.0.1:5173)
         |  HTTP + SSE
 Node companion (127.0.0.1:8787)
   filesystem CRUD · TeX detect · latexmk spawn · cancel · logs
+  OS PDF open · SyncTeX forward/inverse · folder pick
         |
-TeX Live on the machine (latexmk, pdflatex/xelatex/lualatex, biber)
+TeX Live on the machine (latexmk, pdflatex/xelatex/lualatex, biber, synctex)
 ```
 
 ## Runtime pieces
@@ -18,9 +19,9 @@ TeX Live on the machine (latexmk, pdflatex/xelatex/lualatex, biber)
 | ----------------------------- | --------------------------------------------------------------------- |
 | `npm run dev`                 | Starts Vite and the companion together                                |
 | `companion/server.mjs`        | Localhost-only API                                                    |
-| `src/workspace/`              | React state for project, editor, build, settings                      |
+| `src/workspace/`              | React state for project, tabs, build, theme, recent projects          |
 | `src/services/diagnostics.ts` | Parse latexmk/TeX logs into clickable items                           |
-| Settings in `localStorage`    | TeX bin, engine, autosave, fonts, PDF scale, output dir, shell-escape |
+| Settings in `localStorage`    | TeX bin, engine, autosave, theme, SyncTeX, shell-escape, recent paths |
 
 ## Compile contract
 

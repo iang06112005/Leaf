@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { editor as MonacoEditor } from "monaco-editor";
 import { monacoLanguageFor } from "../services/fileKinds";
 import { useWorkspace } from "../workspace/useWorkspace";
+import { EditorTabs } from "./EditorTabs";
 import { Panel } from "./ui/Panel";
 
 export function EditorPane() {
@@ -17,6 +18,7 @@ export function EditorPane() {
     jumpRequest,
     openFile,
     clearJumpRequest,
+    syncTexForward,
   } = useWorkspace();
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 
@@ -45,31 +47,47 @@ export function EditorPane() {
     <Panel
       title="Editor"
       icon={FileCode2}
-      className="min-h-64 border-b border-zinc-800 bg-zinc-950 md:min-h-0 md:border-r md:border-b-0"
+      className="min-h-64 border-b border-[var(--tf-border)] bg-[var(--tf-panel-2)] md:min-h-0 md:border-r md:border-b-0"
     >
+      <EditorTabs />
       {openPath ? (
         <div className="flex h-full min-h-0 flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
-            <p className="truncate font-mono text-xs text-zinc-400" title={openPath}>
+            <p className="truncate font-mono text-xs text-[var(--tf-muted)]" title={openPath}>
               {openPath}
               {dirty ? " •" : ""}
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                void saveOpenFile();
-              }}
-              disabled={!dirty}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-100 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Save className="size-3.5" aria-hidden="true" />
-              Save
-            </button>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const editor = editorRef.current;
+                  const line = editor?.getPosition()?.lineNumber ?? 1;
+                  const column = editor?.getPosition()?.column ?? 1;
+                  void syncTexForward(line, column);
+                }}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded border border-[var(--tf-border)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--tf-accent)]"
+                title="Forward SyncTeX (editor → PDF)"
+              >
+                SyncTeX
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void saveOpenFile();
+                }}
+                disabled={!dirty}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded border border-[var(--tf-border)] bg-[var(--tf-panel)] px-2.5 py-1 text-xs font-medium hover:bg-[var(--tf-accent)] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Save className="size-3.5" aria-hidden="true" />
+                Save
+              </button>
+            </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-hidden rounded border border-zinc-800">
+          <div className="min-h-0 flex-1 overflow-hidden rounded border border-[var(--tf-border)]">
             <Editor
               height="100%"
-              theme="vs-dark"
+              theme={settings.theme === "light" ? "vs" : "vs-dark"}
               path={openPath}
               language={monacoLanguageFor(openPath)}
               value={openContent}
@@ -88,7 +106,7 @@ export function EditorPane() {
           </div>
         </div>
       ) : (
-        <p className="font-mono text-zinc-500">No file open.</p>
+        <p className="font-mono text-[var(--tf-muted)]">No file open.</p>
       )}
     </Panel>
   );

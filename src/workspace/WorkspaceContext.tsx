@@ -7,24 +7,35 @@ import {
   deletePath,
   fetchTree,
   getTexStatus,
+  openPdfInOs,
   openProject as companionOpenProject,
+  pickProject,
   readBinary,
   readText,
   renamePath,
   startCompile,
   streamCompile,
+  synctexForward,
+  synctexInverse,
   writeText,
   type CompanionTreeNode,
   type CompileResult,
+  type SynctexForwardResult,
   type TexStatus,
 } from "../services/companion";
 import { parseLatexLog, type Diagnostic } from "../services/diagnostics";
 import { isPdfProjectFile, isTextProjectFile } from "../services/fileKinds";
 import { findPreferredPdf, findPreferredTex } from "../services/filesystem";
-import { loadSettings, saveSettings, type AppSettings } from "../services/settings";
+import {
+  loadSettings,
+  pushRecentProject,
+  saveSettings,
+  type AppSettings,
+} from "../services/settings";
 import {
   WorkspaceContext,
   type BuildState,
+  type EditorTab,
   type WorkspaceContextValue,
   type WorkspaceStatus,
 } from "./workspace-context";
@@ -38,6 +49,10 @@ function flattenFiles(nodes: CompanionTreeNode[]): { name: string; path: string 
   return files;
 }
 
+function tabDirty(tab: EditorTab): boolean {
+  return tab.content !== tab.savedContent;
+}
+
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [companionOnline, setCompanionOnline] = useState(false);
   const [status, setStatus] = useState<WorkspaceStatus>("idle");
@@ -45,9 +60,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [projectPath, setProjectPath] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
   const [tree, setTree] = useState<CompanionTreeNode[]>([]);
+  const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [openPath, setOpenPath] = useState<string | null>(null);
-  const [openContent, setOpenContentState] = useState("");
-  const [savedContent, setSavedContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
@@ -55,16 +69,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [texStatus, setTexStatus] = useState<TexStatus | null>(null);
   const [buildState, setBuildState] = useState<BuildState>("idle");
   const [buildLog, setBuildLog] = useState("");
+  const [buildStartedAt, setBuildStartedAt] = useState<number | null>(null);
   const [buildResult, setBuildResult] = useState<CompileResult | null>(null);
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [bottomTab, setBottomTab] = useState<"problems" | "log">("problems");
   const [jumpRequest, setJumpRequest] = useState<WorkspaceContextValue["jumpRequest"]>(null);
+  const [pdfFocus, setPdfFocus] = useState<SynctexForwardResult | null>(null);
   const jobIdRef = useRef<string | null>(null);
   const stopStreamRef = useRef<(() => void) | null>(null);
   const pollRef = useRef<number | null>(null);
 
-  const dirty = openPath !== null && openContent !== savedContent;
+  const activeTab = tabs.find((tab) => tab.path === openPath) ?? null;
+  const openContent = activeTab?.content ?? "";
+  const dirty = activeTab ? tabDirty(activeTab) : false;
+  const anyDirty = tabs.some(tabDirty);
 
   const refreshTexStatus = useCallback(async () => {
     if (!(await companionHealth())) {
@@ -73,7 +93,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return;
     }
     setCompanionOnline(true);
-    setTexStatus(await getTexStatus(settings.texBinDir || undefined));
+    try {
+      setTexStatus(await getTexStatus(settings.texBinDir || undefined));
+    } catch (error) {
+      setTexStatus(null);
+      setMessage(error instanceof Error ? error.message : "Could not detect TeX.");
+    }
   }, [settings.texBinDir]);
 
   useEffect(() => {
@@ -86,7 +111,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     saveSettings(settings);
+    document.documentElement.dataset.theme = settings.theme;
+    document.documentElement.style.colorScheme = settings.theme;
   }, [settings]);
+
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!anyDirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [anyDirty]);
 
   const updateSettings = useCallback((patch: Partial<AppSettings>) => {
     setSettings((current) => ({ ...current, ...patch }));
@@ -98,12 +135,26 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setPreviewBytes(bytes);
   }, []);
 
-  const loadText = useCallback(async (root: string, file: string) => {
-    const result = await readText(root, file);
-    setOpenPath(file);
-    setOpenContentState(result.content);
-    setSavedContent(result.content);
+  const upsertTab = useCallback((path: string, content: string) => {
+    setTabs((current) => {
+      const existing = current.find((tab) => tab.path === path);
+      if (existing) {
+        return current.map((tab) =>
+          tab.path === path ? { ...tab, content, savedContent: content } : tab,
+        );
+      }
+      return [...current, { path, content, savedContent: content }];
+    });
+    setOpenPath(path);
   }, []);
+
+  const loadText = useCallback(
+    async (root: string, file: string) => {
+      const result = await readText(root, file);
+      upsertTab(file, result.content);
+    },
+    [upsertTab],
+  );
 
   const refreshTree = useCallback(async () => {
     if (!projectPath) return;
@@ -111,7 +162,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setTree(result.tree);
   }, [projectPath]);
 
-  // Poll tree for external changes while a project is open.
   useEffect(() => {
     if (!projectPath || !companionOnline) return;
     const tick = () => {
@@ -125,6 +175,45 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     };
   }, [companionOnline, projectPath]);
 
+  const applyOpenedProject = useCallback(
+    async (opened: { path: string; name: string; tree: CompanionTreeNode[] }) => {
+      setProjectPath(opened.path);
+      setProjectName(opened.name);
+      setTree(opened.tree);
+      setTabs([]);
+      setOpenPath(null);
+      setPreviewPath(null);
+      setPreviewBytes(null);
+      setBuildLog("");
+      setBuildResult(null);
+      setDiagnostics([]);
+      setBuildState("idle");
+      setBuildStartedAt(null);
+      setPdfFocus(null);
+      setSettings((current) => pushRecentProject(current, opened.path));
+
+      const preferredRoot =
+        settings.rootFile &&
+        flattenFiles(opened.tree).some((file) => file.path === settings.rootFile)
+          ? settings.rootFile
+          : findPreferredTex(opened.tree);
+      if (preferredRoot) {
+        await loadText(opened.path, preferredRoot);
+        if (!settings.rootFile) {
+          setSettings((current) => ({ ...current, rootFile: preferredRoot }));
+        }
+      }
+
+      const pdf = findPreferredPdf(opened.tree);
+      if (pdf) await loadPreview(opened.path, pdf);
+
+      setStatus("ready");
+      setMessage(null);
+      await refreshTexStatus();
+    },
+    [loadPreview, loadText, refreshTexStatus, settings.rootFile],
+  );
+
   const openProject = useCallback(
     async (explicitPath?: string) => {
       setStatus("loading");
@@ -135,54 +224,72 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             "Companion is offline. Run npm run dev (or npm run companion) so latexmk and project I/O work.",
           );
         }
+        if (anyDirty) {
+          const proceed = window.confirm("You have unsaved changes. Open another project anyway?");
+          if (!proceed) {
+            setStatus(projectPath ? "ready" : "idle");
+            setMessage(null);
+            return;
+          }
+        }
         const opened = await companionOpenProject(
           explicitPath || settings.lastProjectPath || undefined,
         );
-        setProjectPath(opened.path);
-        setProjectName(opened.name);
-        setTree(opened.tree);
-        setOpenPath(null);
-        setOpenContentState("");
-        setSavedContent("");
-        setPreviewPath(null);
-        setPreviewBytes(null);
-        setBuildLog("");
-        setBuildResult(null);
-        setDiagnostics([]);
-        setBuildState("idle");
-        updateSettings({ lastProjectPath: opened.path });
-
-        const preferredRoot =
-          settings.rootFile &&
-          flattenFiles(opened.tree).some((file) => file.path === settings.rootFile)
-            ? settings.rootFile
-            : findPreferredTex(opened.tree);
-        if (preferredRoot) {
-          await loadText(opened.path, preferredRoot);
-          if (!settings.rootFile) updateSettings({ rootFile: preferredRoot });
-        }
-
-        const pdf = findPreferredPdf(opened.tree);
-        if (pdf) await loadPreview(opened.path, pdf);
-
-        setStatus("ready");
-        setMessage(null);
-        await refreshTexStatus();
+        await applyOpenedProject(opened);
       } catch (error) {
         setStatus(projectPath ? "ready" : "error");
         setMessage(error instanceof Error ? error.message : "Could not open that project.");
       }
     },
-    [
-      loadPreview,
-      loadText,
-      projectPath,
-      refreshTexStatus,
-      settings.lastProjectPath,
-      settings.rootFile,
-      updateSettings,
-    ],
+    [anyDirty, applyOpenedProject, projectPath, settings.lastProjectPath],
   );
+
+  const openProjectPicker = useCallback(async () => {
+    setStatus("loading");
+    setMessage("Opening folder picker…");
+    try {
+      if (!(await companionHealth())) {
+        throw new Error("Companion offline — start npm run companion.");
+      }
+      if (anyDirty) {
+        const proceed = window.confirm("You have unsaved changes. Open another project anyway?");
+        if (!proceed) {
+          setStatus(projectPath ? "ready" : "idle");
+          setMessage(null);
+          return;
+        }
+      }
+      try {
+        const opened = await pickProject();
+        await applyOpenedProject(opened);
+      } catch {
+        const path = window.prompt(
+          "Native folder dialog unavailable here. Paste an absolute project path:",
+          settings.lastProjectPath || "",
+        );
+        if (!path) {
+          setStatus(projectPath ? "ready" : "idle");
+          setMessage(null);
+          return;
+        }
+        await openProject(path.trim());
+      }
+    } catch (error) {
+      setStatus(projectPath ? "ready" : "error");
+      setMessage(error instanceof Error ? error.message : "Could not open a folder.");
+    }
+  }, [anyDirty, applyOpenedProject, openProject, projectPath, settings.lastProjectPath]);
+
+  const openRecent = useCallback(
+    async (path: string) => {
+      await openProject(path);
+    },
+    [openProject],
+  );
+
+  const setActiveTab = useCallback((path: string) => {
+    setOpenPath(path);
+  }, []);
 
   const openFile = useCallback(
     async (path: string) => {
@@ -197,15 +304,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           setMessage(`Cannot open ${path} in the editor.`);
           return;
         }
-        if (dirty) {
-          // Autosave first when enabled.
-          if (settings.autosave && openPath) {
-            await writeText(projectPath, openPath, openContent);
-            setSavedContent(openContent);
-          } else {
-            const proceed = window.confirm("Discard unsaved changes and open the other file?");
-            if (!proceed) return;
-          }
+        const existing = tabs.find((tab) => tab.path === path);
+        if (existing) {
+          setOpenPath(path);
+          setMessage(null);
+          return;
         }
         await loadText(projectPath, path);
         setMessage(null);
@@ -213,19 +316,27 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         setMessage(error instanceof Error ? error.message : "Could not open that file.");
       }
     },
-    [dirty, loadPreview, loadText, openContent, openPath, projectPath, settings.autosave],
+    [loadPreview, loadText, projectPath, tabs],
   );
 
-  const setOpenContent = useCallback((value: string) => {
-    setOpenContentState(value);
-  }, []);
+  const setOpenContent = useCallback(
+    (value: string) => {
+      if (!openPath) return;
+      setTabs((current) =>
+        current.map((tab) => (tab.path === openPath ? { ...tab, content: value } : tab)),
+      );
+    },
+    [openPath],
+  );
 
   const saveOpenFile = useCallback(async () => {
-    if (!projectPath || !openPath) return;
+    if (!projectPath || !openPath || !activeTab) return;
     setSaving(true);
     try {
-      await writeText(projectPath, openPath, openContent);
-      setSavedContent(openContent);
+      await writeText(projectPath, openPath, activeTab.content);
+      setTabs((current) =>
+        current.map((tab) => (tab.path === openPath ? { ...tab, savedContent: tab.content } : tab)),
+      );
       setMessage(`Saved ${openPath}`);
       await refreshTree();
     } catch (error) {
@@ -233,18 +344,58 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     } finally {
       setSaving(false);
     }
-  }, [openContent, openPath, projectPath, refreshTree]);
+  }, [activeTab, openPath, projectPath, refreshTree]);
 
-  // Autosave debounce
+  const saveAll = useCallback(async () => {
+    if (!projectPath) return;
+    setSaving(true);
+    try {
+      for (const tab of tabs) {
+        if (!tabDirty(tab)) continue;
+        await writeText(projectPath, tab.path, tab.content);
+      }
+      setTabs((current) => current.map((tab) => ({ ...tab, savedContent: tab.content })));
+      setMessage("Saved all open files");
+      await refreshTree();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not save all files.");
+    } finally {
+      setSaving(false);
+    }
+  }, [projectPath, refreshTree, tabs]);
+
+  const closeTab = useCallback(
+    async (path: string) => {
+      const tab = tabs.find((item) => item.path === path);
+      if (!tab) return;
+      if (tabDirty(tab)) {
+        if (settings.autosave && projectPath) {
+          await writeText(projectPath, tab.path, tab.content);
+        } else {
+          const proceed = window.confirm(`${path} has unsaved changes. Close anyway?`);
+          if (!proceed) return;
+        }
+      }
+      setTabs((current) => {
+        const next = current.filter((item) => item.path !== path);
+        if (openPath === path) {
+          setOpenPath(next[next.length - 1]?.path ?? null);
+        }
+        return next;
+      });
+    },
+    [openPath, projectPath, settings.autosave, tabs],
+  );
+
   useEffect(() => {
-    if (!settings.autosave || !dirty || !projectPath || !openPath) return;
+    if (!settings.autosave || !dirty || !projectPath || !openPath || !activeTab) return;
     const handle = window.setTimeout(() => {
       void saveOpenFile();
     }, settings.autosaveDelayMs);
     return () => window.clearTimeout(handle);
   }, [
+    activeTab,
     dirty,
-    openContent,
     openPath,
     projectPath,
     saveOpenFile,
@@ -275,12 +426,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (from: string, to: string) => {
       if (!projectPath) return;
       const renamed = await renamePath(projectPath, from, to);
-      if (openPath === from) {
-        setOpenPath(renamed.path);
-      }
-      if (previewPath === from) {
-        setPreviewPath(renamed.path);
-      }
+      setTabs((current) =>
+        current.map((tab) => (tab.path === from ? { ...tab, path: renamed.path } : tab)),
+      );
+      if (openPath === from) setOpenPath(renamed.path);
+      if (previewPath === from) setPreviewPath(renamed.path);
       await refreshTree();
     },
     [openPath, previewPath, projectPath, refreshTree],
@@ -291,11 +441,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (!projectPath) return;
       if (!window.confirm(`Delete ${target}?`)) return;
       await deletePath(projectPath, target);
-      if (openPath === target) {
-        setOpenPath(null);
-        setOpenContentState("");
-        setSavedContent("");
-      }
+      setTabs((current) => current.filter((tab) => tab.path !== target));
+      if (openPath === target) setOpenPath(null);
       if (previewPath === target) {
         setPreviewPath(null);
         setPreviewBytes(null);
@@ -314,22 +461,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setMessage("Companion offline — start npm run companion.");
       return;
     }
+    if (!texStatus?.ok) {
+      setMessage(
+        texStatus?.installHint ??
+          "latexmk was not found. Install TeX Live or set TeX bin directory in Settings.",
+      );
+      setSettingsOpen(true);
+      return;
+    }
     if (settings.shellEscape) {
       const ok = window.confirm(
         "shell-escape is ON. TeX may run external programs. Continue compiling?",
       );
       if (!ok) return;
     }
-    if (dirty && openPath) {
-      await saveOpenFile();
-    }
+    if (anyDirty) await saveAll();
 
     const rootFile = settings.rootFile || openPath || "main.tex";
     setBuildState("running");
+    setBuildStartedAt(Date.now());
     setBuildLog("");
     setBuildResult(null);
     setDiagnostics([]);
-    setMessage(`Compiling ${rootFile}…`);
+    setBottomTab("log");
+    setMessage(`Compiling ${rootFile} with ${settings.engine}…`);
 
     try {
       const started = await startCompile({
@@ -350,12 +505,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           setBuildLog(result.log);
           setDiagnostics(parseLatexLog(result.log));
           setBuildState(result.ok ? "success" : result.signal ? "cancelled" : "failed");
+          setBuildStartedAt(null);
           setMessage(
             result.ok
               ? `Build ok in ${(result.durationMs / 1000).toFixed(1)}s`
               : `Build failed (exit ${result.code ?? "?"})`,
           );
           jobIdRef.current = null;
+          if (!result.ok) setBottomTab("problems");
           if (result.ok && result.pdfRelative) {
             void loadPreview(projectPath, result.pdfRelative.replace(/\\/g, "/"));
           }
@@ -363,27 +520,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         },
         onError: (error) => {
           setBuildState("failed");
+          setBuildStartedAt(null);
           setMessage(error.message);
         },
       });
     } catch (error) {
       setBuildState("failed");
+      setBuildStartedAt(null);
       setMessage(error instanceof Error ? error.message : "Compile failed to start.");
     }
   }, [
+    anyDirty,
     companionOnline,
-    dirty,
     loadPreview,
     openPath,
     projectPath,
     refreshTree,
-    saveOpenFile,
+    saveAll,
     settings.engine,
     settings.outputDir,
     settings.rootFile,
     settings.shellEscape,
     settings.synctex,
     settings.texBinDir,
+    texStatus,
   ]);
 
   const stopCompile = useCallback(async () => {
@@ -393,6 +553,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         projectPath: projectPath ?? undefined,
       });
       setBuildState("cancelled");
+      setBuildStartedAt(null);
       setMessage("Build cancelled.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not stop the build.");
@@ -412,6 +573,75 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearJumpRequest = useCallback(() => setJumpRequest(null), []);
+  const clearPdfFocus = useCallback(() => setPdfFocus(null), []);
+
+  const openPdfExternally = useCallback(async () => {
+    if (!projectPath || !previewPath) {
+      setMessage("No PDF to open.");
+      return;
+    }
+    try {
+      const result = await openPdfInOs({ path: projectPath, file: previewPath });
+      setMessage(`Opened ${result.path}`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not open PDF in the OS.");
+    }
+  }, [previewPath, projectPath]);
+
+  const syncTexForward = useCallback(
+    async (line: number, column = 1) => {
+      if (!projectPath || !openPath || !previewPath) {
+        setMessage("Open a TeX file and PDF before SyncTeX.");
+        return;
+      }
+      if (!settings.synctex) {
+        setMessage("Enable SyncTeX in Settings, then recompile.");
+        return;
+      }
+      try {
+        const result = await synctexForward({
+          path: projectPath,
+          texRelative: openPath,
+          pdfRelative: previewPath,
+          line,
+          column,
+          outputDir: settings.outputDir || null,
+          texBinDir: settings.texBinDir || null,
+        });
+        setPdfFocus(result);
+        setMessage(`SyncTeX → page ${result.page}`);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Forward SyncTeX failed.");
+      }
+    },
+    [openPath, previewPath, projectPath, settings.outputDir, settings.synctex, settings.texBinDir],
+  );
+
+  const syncTexInverse = useCallback(
+    async (page: number, x: number, y: number) => {
+      if (!projectPath || !previewPath || !settings.synctex) return;
+      try {
+        const result = await synctexInverse({
+          path: projectPath,
+          pdfRelative: previewPath,
+          page,
+          x,
+          y,
+          outputDir: settings.outputDir || null,
+          texBinDir: settings.texBinDir || null,
+        });
+        setJumpRequest({
+          path: result.file.replace(/^\.\//, ""),
+          line: result.line,
+          token: Date.now(),
+        });
+        setMessage(`SyncTeX ← ${result.file}:${result.line}`);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Inverse SyncTeX failed.");
+      }
+    },
+    [previewPath, projectPath, settings.outputDir, settings.synctex, settings.texBinDir],
+  );
 
   const value = useMemo<WorkspaceContextValue>(
     () => ({
@@ -421,9 +651,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       projectPath,
       projectName,
       tree,
+      tabs,
       openPath,
       openContent,
       dirty,
+      anyDirty,
       saving,
       previewPath,
       previewBytes,
@@ -431,15 +663,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       texStatus,
       buildState,
       buildLog,
+      buildStartedAt,
       buildResult,
       diagnostics,
       sidebarCollapsed,
       settingsOpen,
+      bottomTab,
       jumpRequest,
+      pdfFocus,
       openProject,
+      openProjectPicker,
+      openRecent,
       openFile,
+      closeTab,
+      setActiveTab,
       setOpenContent,
       saveOpenFile,
+      saveAll,
       refreshTree,
       createFile: createFileInProject,
       createFolder: createFolderInProject,
@@ -450,15 +690,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       updateSettings,
       setSidebarCollapsed,
       setSettingsOpen,
+      setBottomTab,
       jumpToDiagnostic,
       clearJumpRequest,
       refreshTexStatus,
+      openPdfExternally,
+      syncTexForward,
+      syncTexInverse,
+      clearPdfFocus,
     }),
     [
+      anyDirty,
+      bottomTab,
       buildLog,
       buildResult,
+      buildStartedAt,
       buildState,
       clearJumpRequest,
+      clearPdfFocus,
+      closeTab,
       companionOnline,
       compile,
       createFileInProject,
@@ -472,7 +722,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       openContent,
       openFile,
       openPath,
+      openPdfExternally,
       openProject,
+      openProjectPicker,
+      openRecent,
+      pdfFocus,
       previewBytes,
       previewPath,
       projectName,
@@ -480,14 +734,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       refreshTexStatus,
       refreshTree,
       renameEntry,
+      saveAll,
       saveOpenFile,
       saving,
+      setActiveTab,
       setOpenContent,
       settings,
       settingsOpen,
       sidebarCollapsed,
       status,
       stopCompile,
+      syncTexForward,
+      syncTexInverse,
+      tabs,
       texStatus,
       tree,
       updateSettings,

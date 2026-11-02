@@ -4,7 +4,7 @@
 
 - Node.js 22+
 - npm
-- TeX Live with `latexmk` (and `pdflatex` / optionally `xelatex`, `lualatex`, `biber`)
+- TeX Live with `latexmk` (and `pdflatex` / optionally `xelatex`, `lualatex`, `biber`, `synctex`)
 - Chrome or Edge recommended for the UI
 
 ## Install
@@ -22,7 +22,9 @@ npm run dev
 - UI: http://127.0.0.1:5173
 - Companion: http://127.0.0.1:8787/api/health
 
-Open a project with an **absolute path** (Windows example: `C:\Repo_me\Leaf\tests\fixtures\article`). The toolbar **Open** prompt accepts a path; empty uses a native folder dialog when the OS allows it.
+Open a project with an **absolute path**, the toolbar **Open** button (native folder dialog when available), or **Recent**. If the native dialog is unavailable, paste an absolute path when prompted.
+
+Shortcuts: `Ctrl/Cmd+Enter` compile (or stop while running), `Ctrl/Cmd+S` save, `Ctrl/Cmd+Shift+S` save all.
 
 ## Checks
 
@@ -30,7 +32,7 @@ Open a project with an **absolute path** (Windows example: `C:\Repo_me\Leaf\test
 ./scripts/check.sh
 ```
 
-`test:compile` runs when `latexmk` is on `PATH`.
+`test:compile` runs when `latexmk` is on `PATH` (article + with-image + xelatex).
 
 ## Windows (Ian)
 

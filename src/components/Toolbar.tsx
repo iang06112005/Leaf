@@ -1,12 +1,15 @@
 import {
   FolderOpen,
+  Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Play,
   Save,
   Settings as SettingsIcon,
   Square,
+  Sun,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useWorkspace } from "../workspace/useWorkspace";
 
 export function Toolbar() {
@@ -15,12 +18,17 @@ export function Toolbar() {
     projectName,
     projectPath,
     dirty,
+    anyDirty,
     saving,
     buildState,
+    buildStartedAt,
+    buildResult,
     settings,
     texStatus,
-    openProject,
+    openProjectPicker,
+    openRecent,
     saveOpenFile,
+    saveAll,
     compile,
     stopCompile,
     updateSettings,
@@ -30,13 +38,29 @@ export function Toolbar() {
     message,
   } = useWorkspace();
 
-  const saveLabel = saving ? "Saving…" : dirty ? "Unsaved" : "Saved";
+  const [elapsedMs, setElapsedMs] = useState(0);
+  useEffect(() => {
+    if (buildState !== "running" || !buildStartedAt) {
+      setElapsedMs(0);
+      return;
+    }
+    const id = window.setInterval(() => setElapsedMs(Date.now() - buildStartedAt), 200);
+    return () => window.clearInterval(id);
+  }, [buildState, buildStartedAt]);
+
+  const saveLabel = saving ? "Saving…" : anyDirty ? "Unsaved" : "Saved";
+  const durationLabel =
+    buildState === "running"
+      ? `${(elapsedMs / 1000).toFixed(1)}s`
+      : buildResult
+        ? `${(buildResult.durationMs / 1000).toFixed(1)}s`
+        : null;
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-2 border-b border-zinc-800 bg-zinc-900 px-2 text-xs text-zinc-200">
+    <header className="flex h-11 shrink-0 items-center gap-2 border-b border-[var(--tf-border)] bg-[var(--tf-panel)] px-2 text-xs text-[var(--tf-text)]">
       <button
         type="button"
-        className="rounded p-1.5 hover:bg-zinc-800"
+        className="rounded p-1.5 hover:bg-[var(--tf-accent)]"
         title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
       >
@@ -49,39 +73,61 @@ export function Toolbar() {
 
       <button
         type="button"
-        className="inline-flex items-center gap-1.5 rounded border border-zinc-700 bg-zinc-800 px-2 py-1 hover:bg-zinc-700"
+        className="inline-flex items-center gap-1.5 rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-2 py-1 hover:bg-[var(--tf-accent)]"
         onClick={() => {
-          const path = window.prompt(
-            "Absolute project path (leave empty to use the OS folder dialog when available):",
-            settings.lastProjectPath || projectPath || "",
-          );
-          if (path === null) return;
-          void openProject(path.trim() || undefined);
+          void openProjectPicker();
         }}
       >
         <FolderOpen className="size-3.5" aria-hidden="true" />
         Open
       </button>
 
+      {settings.recentProjects.length > 0 ? (
+        <label className="flex items-center gap-1 text-[var(--tf-muted)]">
+          Recent
+          <select
+            className="max-w-48 rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-1.5 py-1 text-[var(--tf-text)]"
+            value=""
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value) void openRecent(value);
+              event.target.value = "";
+            }}
+          >
+            <option value="">Select…</option>
+            {settings.recentProjects.map((path) => (
+              <option key={path} value={path}>
+                {path}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
       <div className="min-w-0 flex-1 truncate font-medium">
         {projectName ?? "No project"}
         {projectPath ? (
-          <span className="ml-2 font-normal text-zinc-500" title={projectPath}>
+          <span className="ml-2 font-normal text-[var(--tf-muted)]" title={projectPath}>
             {projectPath}
           </span>
         ) : null}
       </div>
 
       <span
-        className={`rounded px-2 py-1 ${dirty ? "bg-amber-900/50 text-amber-100" : "bg-zinc-800 text-zinc-400"}`}
+        className={`rounded px-2 py-1 ${
+          dirty || anyDirty
+            ? "bg-amber-900/40 text-amber-100"
+            : "bg-[var(--tf-accent)] text-[var(--tf-muted)]"
+        }`}
       >
         {saveLabel}
       </span>
 
       <button
         type="button"
-        className="inline-flex items-center gap-1 rounded border border-zinc-700 px-2 py-1 hover:bg-zinc-800 disabled:opacity-40"
+        className="inline-flex items-center gap-1 rounded border border-[var(--tf-border)] px-2 py-1 hover:bg-[var(--tf-accent)] disabled:opacity-40"
         disabled={!dirty && !saving}
+        title="Save (Ctrl/Cmd+S)"
         onClick={() => {
           void saveOpenFile();
         }}
@@ -89,15 +135,25 @@ export function Toolbar() {
         <Save className="size-3.5" aria-hidden="true" />
         Save
       </button>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 rounded border border-[var(--tf-border)] px-2 py-1 hover:bg-[var(--tf-accent)] disabled:opacity-40"
+        disabled={!anyDirty}
+        onClick={() => {
+          void saveAll();
+        }}
+      >
+        Save all
+      </button>
 
-      <label className="flex items-center gap-1 text-zinc-400">
+      <label className="flex items-center gap-1 text-[var(--tf-muted)]">
         Engine
         <select
-          className="rounded border border-zinc-700 bg-zinc-950 px-1.5 py-1 text-zinc-100"
+          className="rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-1.5 py-1 text-[var(--tf-text)]"
           value={settings.engine}
           onChange={(event) =>
             updateSettings({
-              engine: event.target.value as AppSettingsEngine,
+              engine: event.target.value as "pdflatex" | "xelatex" | "lualatex",
             })
           }
         >
@@ -123,6 +179,7 @@ export function Toolbar() {
           type="button"
           className="inline-flex items-center gap-1 rounded border border-emerald-800 bg-emerald-950 px-2 py-1 text-emerald-100 hover:bg-emerald-900 disabled:opacity-40"
           disabled={!projectPath || !companionOnline}
+          title="Compile (Ctrl/Cmd+Enter)"
           onClick={() => {
             void compile();
           }}
@@ -132,11 +189,16 @@ export function Toolbar() {
         </button>
       )}
 
+      <span className="rounded bg-[var(--tf-accent)] px-2 py-1 text-[var(--tf-muted)]">
+        {buildState}
+        {durationLabel ? ` · ${durationLabel}` : ""}
+      </span>
+
       <span
         className={`rounded px-2 py-1 ${
           companionOnline
             ? texStatus?.ok
-              ? "bg-zinc-800 text-zinc-300"
+              ? "bg-[var(--tf-accent)] text-[var(--tf-muted)]"
               : "bg-amber-950 text-amber-100"
             : "bg-red-950 text-red-100"
         }`}
@@ -147,7 +209,20 @@ export function Toolbar() {
 
       <button
         type="button"
-        className="rounded p-1.5 hover:bg-zinc-800"
+        className="rounded p-1.5 hover:bg-[var(--tf-accent)]"
+        title="Toggle theme"
+        onClick={() => updateSettings({ theme: settings.theme === "dark" ? "light" : "dark" })}
+      >
+        {settings.theme === "dark" ? (
+          <Sun className="size-4" aria-hidden="true" />
+        ) : (
+          <Moon className="size-4" aria-hidden="true" />
+        )}
+      </button>
+
+      <button
+        type="button"
+        className="rounded p-1.5 hover:bg-[var(--tf-accent)]"
         title="Settings"
         onClick={() => setSettingsOpen(true)}
       >
@@ -155,12 +230,10 @@ export function Toolbar() {
       </button>
 
       {message ? (
-        <span className="max-w-56 truncate text-zinc-400" title={message}>
+        <span className="max-w-56 truncate text-[var(--tf-muted)]" title={message}>
           {message}
         </span>
       ) : null}
     </header>
   );
 }
-
-type AppSettingsEngine = "pdflatex" | "xelatex" | "lualatex";

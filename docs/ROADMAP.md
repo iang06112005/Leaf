@@ -10,14 +10,15 @@ Done: open project, Monaco, PDF.js preview.
 
 ## Milestone 2 / Prism-like loop (this branch)
 
-Done / in progress on this PR:
+Done on this PR:
 
 - Node companion compile host
-- latexmk engines, cancel, logs, diagnostics
+- latexmk engines, cancel, streaming log, diagnostics
 - Autosave, CRUD files/folders, tree refresh polling
-- Settings, toolbar, resizable panels
-- PDF zoom/fit/pages/search/continuous scroll
-- SyncTeX flag via latexmk (viewer jump polish may continue)
+- Settings, toolbar, resizable panels, dark/light themes
+- Multi editor tabs, unsaved guards, recent projects
+- PDF zoom/fit/pages/search, OS open, SyncTeX forward/inverse
+- Image fixture + xelatex compile smoke
 
 ## Out of scope
 

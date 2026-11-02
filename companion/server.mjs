@@ -16,7 +16,9 @@ import {
   renameEntry,
   writeTextFile,
 } from "./lib/fsops.mjs";
+import { openPathInOs, openProjectFileInOs, pdfAbsolutePath } from "./lib/open.mjs";
 import { assertAbsolutePath } from "./lib/paths.mjs";
+import { synctexForward, synctexInverse } from "./lib/synctex.mjs";
 import { detectTeX } from "./lib/tex.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -249,6 +251,70 @@ async function handle(req, res) {
         running: !job.result,
         result: job.result,
         log: job.log,
+      });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/pdf/open") {
+      const body = await readJson(req);
+      if (body.absolutePath) {
+        sendJson(res, 200, await openPathInOs(body.absolutePath));
+        return;
+      }
+      const projectPath = assertAbsolutePath(body.path || "");
+      const file = body.file || "";
+      sendJson(res, 200, await openProjectFileInOs(projectPath, file));
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/synctex/forward") {
+      const body = await readJson(req);
+      const projectPath = assertAbsolutePath(body.path || "");
+      const pdfRelative = body.pdfRelative || body.pdf || "main.pdf";
+      const absolutePdf = pdfAbsolutePath(projectPath, pdfRelative, body.outputDir || null);
+      const result = await synctexForward({
+        projectPath,
+        texRelative: body.texRelative || body.tex,
+        pdfRelative: absolutePdf,
+        line: Number(body.line) || 1,
+        column: Number(body.column) || 1,
+        texBinDir: body.texBinDir || null,
+      });
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/synctex/inverse") {
+      const body = await readJson(req);
+      const projectPath = assertAbsolutePath(body.path || "");
+      const pdfRelative = body.pdfRelative || body.pdf || "main.pdf";
+      const absolutePdf = pdfAbsolutePath(projectPath, pdfRelative, body.outputDir || null);
+      const result = await synctexInverse({
+        projectPath,
+        pdfRelative: absolutePdf,
+        page: Number(body.page) || 1,
+        x: Number(body.x) || 0,
+        y: Number(body.y) || 0,
+        texBinDir: body.texBinDir || null,
+      });
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/project/pick") {
+      const picked = await pickDirectory();
+      if (!picked) {
+        sendJson(res, 400, {
+          error:
+            "No folder selected (native dialog unavailable in this environment). Paste an absolute path instead.",
+        });
+        return;
+      }
+      const projectPath = assertAbsolutePath(picked);
+      sendJson(res, 200, {
+        path: projectPath,
+        name: path.basename(projectPath),
+        tree: await buildTree(projectPath),
       });
       return;
     }

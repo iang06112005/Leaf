@@ -34,7 +34,7 @@ function TreeNode({
       <div>
         <button
           type="button"
-          className="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-sm text-zinc-300 hover:bg-zinc-800"
+          className="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-sm text-[var(--tf-text)] hover:bg-[var(--tf-accent)]"
           style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
           onClick={() => setExpanded((value) => !value)}
         >
@@ -43,7 +43,7 @@ function TreeNode({
           ) : (
             <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
           )}
-          <Folder className="size-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
+          <Folder className="size-3.5 shrink-0 text-[var(--tf-muted)]" aria-hidden="true" />
           <span className="truncate">{node.name}</span>
         </button>
         {expanded
@@ -70,8 +70,10 @@ function TreeNode({
       type="button"
       disabled={!openable}
       className={`flex w-full items-center gap-1 rounded px-2 py-1 text-left text-sm ${
-        active ? "bg-zinc-800 text-zinc-50" : "text-zinc-300 hover:bg-zinc-800"
-      } disabled:cursor-default disabled:text-zinc-600 disabled:hover:bg-transparent`}
+        active
+          ? "bg-[var(--tf-accent)] text-[var(--tf-text)]"
+          : "text-[var(--tf-text)] hover:bg-[var(--tf-accent)]"
+      } disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent`}
       style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
       onClick={() => {
         if (openable) onOpen(node.path);
@@ -79,7 +81,7 @@ function TreeNode({
       title={node.path}
     >
       <span className="size-3.5 shrink-0" aria-hidden="true" />
-      <FileText className="size-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
+      <FileText className="size-3.5 shrink-0 text-[var(--tf-muted)]" aria-hidden="true" />
       <span className="truncate">{node.name}</span>
     </button>
   );
@@ -87,7 +89,7 @@ function TreeNode({
 
 export function FileTree({ nodes, activePath, previewPath, onOpen }: FileTreeProps) {
   if (nodes.length === 0) {
-    return <p className="px-2 text-sm text-zinc-500">This folder is empty.</p>;
+    return <p className="px-2 text-sm text-[var(--tf-muted)]">This folder is empty.</p>;
   }
 
   return (

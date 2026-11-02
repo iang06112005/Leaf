@@ -1,50 +1,36 @@
 # Architecture
 
-TexFlow Milestone 1 is a single-page web application. Vite serves React during development and builds static files for production. There is no server and no desktop host. Project files are opened through the browser File System Access API.
+TexFlow is a browser UI plus a **local Node companion** on `127.0.0.1:8787`. The page cannot spawn `latexmk` or learn an absolute folder path from the File System Access API alone. The companion owns project I/O and compilation. See [decisions/0005-local-node-companion.md](decisions/0005-local-node-companion.md).
 
 ```text
-index.html
-src/main.tsx → App → WorkspaceProvider → AppShell
-  Sidebar (Open folder, FileTree)
-  EditorPane (Monaco + Save)
-  PreviewPane (PDF.js)
-  StatusBar
-src/services/filesystem.ts   directory tree, read, write
-src/services/fileKinds.ts    text vs pdf vs monaco language
-src/services/paths.ts        relative path helpers
+Vite UI (127.0.0.1:5173)
+  Toolbar / Sidebar / Monaco / PDF.js / Diagnostics / Settings
+        |  HTTP + SSE
+Node companion (127.0.0.1:8787)
+  filesystem CRUD · TeX detect · latexmk spawn · cancel · logs
+        |
+TeX Live on the machine (latexmk, pdflatex/xelatex/lualatex, biber)
 ```
 
-## What exists now
+## Runtime pieces
 
-From the `md` breakpoint upward the shell is three columns plus a status strip. Below that the regions stack.
+| Piece                         | Role                                                                  |
+| ----------------------------- | --------------------------------------------------------------------- |
+| `npm run dev`                 | Starts Vite and the companion together                                |
+| `companion/server.mjs`        | Localhost-only API                                                    |
+| `src/workspace/`              | React state for project, editor, build, settings                      |
+| `src/services/diagnostics.ts` | Parse latexmk/TeX logs into clickable items                           |
+| Settings in `localStorage`    | TeX bin, engine, autosave, fonts, PDF scale, output dir, shell-escape |
 
-| Region          | Role                                                                                                          |
-| --------------- | ------------------------------------------------------------------------------------------------------------- |
-| Project sidebar | Open a local folder, list its tree, refresh. Click a text file or a PDF.                                      |
-| Editor          | Monaco. Loads text files (`.tex`, `.bib`, `.cls`, …). Save is an explicit button.                             |
-| Preview         | PDF.js. Renders page 1 of a project `.pdf` the user opened or that was auto-picked (`main.pdf` when present). |
-| Status strip    | Ready / messages, project and open path, app version.                                                         |
+## Compile contract
 
-Writes go only through Save. Autosave is Milestone 3. Compilation does not exist yet.
+Follows [decisions/0003-compiler-invocation.md](decisions/0003-compiler-invocation.md):
 
-Opening a project uses `showDirectoryPicker()` with `readwrite` mode. The directory handle stays in memory for the session. See [decisions/0004-open-project-file-system-access.md](decisions/0004-open-project-file-system-access.md).
-
-## What is not a module yet
-
-| Future owner           | Responsibility                                                                |
-| ---------------------- | ----------------------------------------------------------------------------- |
-| Compiler and processes | Spawn `latexmk` with a structured argument list. A page cannot do this alone. |
-| Diagnostics            | Parse the TeX log into locations the editor can use.                          |
-| Settings               | Local config outside the project. shell-escape lives here.                    |
-| Autosave / watch       | Explicit, visible write and file watching. Milestone 3.                       |
-| SyncTeX                | After compilation is stable.                                                  |
-
-The compiler boundary is [decisions/0003-compiler-invocation.md](decisions/0003-compiler-invocation.md).
+- Structured `spawn(latexmk, args, { shell: false, cwd: projectPath })`
+- One build per project; cancelable; no app timeout
+- shell-escape off by default; UI warns when enabled
+- PDF preview refreshes only after a successful build (or when the user opens a PDF)
 
 ## Persistence
 
-No database. A project is the directory the user opened. See [decisions/0002-projects-are-directories.md](decisions/0002-projects-are-directories.md).
-
-## UI boundary
-
-The page never builds shell command strings. A control that writes a file must be an explicit user action. Save is that action today.
+Projects remain ordinary directories. No document database. Autosave writes only the open file the user is editing, into that directory, after they opened the project and (by default) left autosave on.

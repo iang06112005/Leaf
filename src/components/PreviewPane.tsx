@@ -4,7 +4,7 @@ import { PdfPreview } from "./PdfPreview";
 import { Panel } from "./ui/Panel";
 
 export function PreviewPane() {
-  const { previewPath, previewBytes } = useWorkspace();
+  const { previewPath, previewBytes, buildState } = useWorkspace();
 
   return (
     <Panel title="Preview" icon={FileText} className="min-h-40 bg-zinc-900 md:min-h-0">
@@ -12,8 +12,9 @@ export function PreviewPane() {
         <PdfPreview path={previewPath} data={previewBytes} />
       ) : (
         <p className="text-sm text-zinc-400">
-          No PDF open. Open a folder that already contains a PDF, or click a `.pdf` file in the
-          project tree. Compilation is not part of this milestone.
+          No PDF open. Compile successfully to refresh the preview
+          {buildState === "running" ? " (build in progress…)" : ""}, or open an existing `.pdf` in
+          the tree.
         </p>
       )}
     </Panel>

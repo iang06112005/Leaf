@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { useWorkspace } from "../workspace/useWorkspace";
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -10,63 +11,154 @@ type PdfPreviewProps = {
 };
 
 export function PdfPreview({ path, data }: PdfPreviewProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { settings, updateSettings, projectPath } = useWorkspace();
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pageLabel, setPageLabel] = useState("Loading PDF…");
+  const [pageCount, setPageCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("Loading PDF…");
+  const scrollTopRef = useRef(0);
+  const dataKey = useMemo(
+    () => `${path}:${data.byteLength}:${data[0]}:${data[data.length - 1]}`,
+    [data, path],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [dataKey]);
 
   useEffect(() => {
     let cancelled = false;
     let documentProxy: PDFDocumentProxy | null = null;
 
-    async function render() {
+    async function renderAll() {
       setError(null);
-      setPageLabel("Loading PDF…");
+      setStatus("Loading PDF…");
+      const host = containerRef.current;
+      if (!host) return;
+      scrollTopRef.current = host.scrollTop;
+      host.innerHTML = "";
 
       try {
-        // Copy the bytes. pdf.js may transfer the underlying buffer.
         const loadingTask = getDocument({ data: data.slice() });
         documentProxy = await loadingTask.promise;
         if (cancelled) return;
+        setPageCount(documentProxy.numPages);
 
-        const page = await documentProxy.getPage(1);
-        if (cancelled) return;
+        const scale = settings.pdfScale;
+        for (let pageNumber = 1; pageNumber <= documentProxy.numPages; pageNumber += 1) {
+          const pdfPage = await documentProxy.getPage(pageNumber);
+          if (cancelled) return;
+          const viewport = pdfPage.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.className = "mx-auto mb-3 max-w-full rounded border border-zinc-800 bg-white";
+          canvas.dataset.page = String(pageNumber);
+          host.appendChild(canvas);
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("Could not create a 2D canvas context.");
+          await pdfPage.render({ canvasContext: context, canvas, viewport }).promise;
 
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const viewport = page.getViewport({ scale: 1.25 });
-        const context = canvas.getContext("2d");
-        if (!context) {
-          throw new Error("Could not create a 2D canvas context.");
+          if (search.trim()) {
+            const text = await pdfPage.getTextContent();
+            const haystack = text.items
+              .map((item) => ("str" in item ? item.str : ""))
+              .join(" ")
+              .toLowerCase();
+            if (haystack.includes(search.trim().toLowerCase())) {
+              canvas.classList.add("outline", "outline-2", "outline-amber-400");
+            }
+          }
         }
 
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        await page.render({ canvasContext: context, canvas, viewport }).promise;
-        if (cancelled) return;
-
-        setPageLabel(`${path} · page 1 of ${documentProxy.numPages}`);
+        setStatus(`${path} · ${documentProxy.numPages} page(s)`);
+        host.scrollTop = scrollTopRef.current;
       } catch (renderError) {
         if (cancelled) return;
         setError(renderError instanceof Error ? renderError.message : "Could not render that PDF.");
       }
     }
 
-    void render();
-
+    void renderAll();
     return () => {
       cancelled = true;
       void documentProxy?.cleanup();
     };
-  }, [data, path]);
+  }, [data, dataKey, path, search, settings.pdfScale]);
+
+  useEffect(() => {
+    const host = containerRef.current;
+    if (!host || page < 1) return;
+    const canvas = host.querySelector(`canvas[data-page="${page}"]`);
+    canvas?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [page]);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
-      <p className="truncate text-xs text-zinc-400">{pageLabel}</p>
-      {error ? <p className="text-sm text-red-300">{error}</p> : null}
-      <div className="min-h-0 flex-1 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-2">
-        <canvas ref={canvasRef} className="mx-auto max-w-full" />
+      <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+        <span className="truncate">{status}</span>
+        <button
+          type="button"
+          className="rounded border border-zinc-700 px-2 py-1 hover:bg-zinc-800"
+          onClick={() => updateSettings({ pdfScale: Math.max(0.5, settings.pdfScale - 0.1) })}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          className="rounded border border-zinc-700 px-2 py-1 hover:bg-zinc-800"
+          onClick={() => updateSettings({ pdfScale: 1 })}
+        >
+          Fit
+        </button>
+        <button
+          type="button"
+          className="rounded border border-zinc-700 px-2 py-1 hover:bg-zinc-800"
+          onClick={() => updateSettings({ pdfScale: Math.min(3, settings.pdfScale + 0.1) })}
+        >
+          +
+        </button>
+        <label className="flex items-center gap-1">
+          Page
+          <input
+            type="number"
+            min={1}
+            max={Math.max(1, pageCount)}
+            className="w-14 rounded border border-zinc-700 bg-zinc-950 px-1 py-0.5"
+            value={page}
+            onChange={(event) => setPage(Number(event.target.value) || 1)}
+          />
+          / {pageCount || "?"}
+        </label>
+        <input
+          className="min-w-32 flex-1 rounded border border-zinc-700 bg-zinc-950 px-2 py-1"
+          placeholder="Search text"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        {projectPath ? (
+          <button
+            type="button"
+            className="rounded border border-zinc-700 px-2 py-1 hover:bg-zinc-800"
+            onClick={() => {
+              // Absolute path is known to the companion; open via OS when possible.
+              window.open(
+                `file:///${projectPath.replace(/\\/g, "/")}/${path}`.replace(/([^:])\/+/g, "$1/"),
+                "_blank",
+              );
+            }}
+          >
+            Open externally
+          </button>
+        ) : null}
       </div>
+      {error ? <p className="text-sm text-red-300">{error}</p> : null}
+      <div
+        ref={containerRef}
+        className="min-h-0 flex-1 overflow-auto rounded border border-zinc-800 bg-zinc-950 p-2"
+      />
     </div>
   );
 }

@@ -2,10 +2,10 @@
 
 ## Prerequisites
 
-- Node.js 22 or newer
+- Node.js 22+
 - npm
-- Chrome or Edge to open a local project folder (File System Access API)
-- TeX Live is not required until Milestone 2
+- TeX Live with `latexmk` (and `pdflatex` / optionally `xelatex`, `lualatex`, `biber`)
+- Chrome or Edge recommended for the UI
 
 ## Install
 
@@ -19,9 +19,10 @@ npm install
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. The server binds that address and fails if the port is taken.
+- UI: http://127.0.0.1:5173
+- Companion: http://127.0.0.1:8787/api/health
 
-`npm run build` writes `dist/`. `npm run preview` serves that build.
+Open a project with an **absolute path** (Windows example: `C:\Repo_me\Leaf\tests\fixtures\article`). The toolbar **Open** prompt accepts a path; empty uses a native folder dialog when the OS allows it.
 
 ## Checks
 
@@ -29,8 +30,15 @@ Open http://127.0.0.1:5173. The server binds that address and fails if the port 
 ./scripts/check.sh
 ```
 
-## Open a project
+`test:compile` runs when `latexmk` is on `PATH`.
 
-Use **Open folder** and choose any ordinary directory. The sample at `tests/fixtures/minimal` is enough to see the editor. Add a PDF to that folder if you want the preview without compiling.
+## Windows (Ian)
 
-Writes only happen when you click **Save**.
+```bat
+cd C:\Repo_me\Leaf
+git pull
+npm install
+npm run dev
+```
+
+Install TeX Live from https://tug.org/texlive/ so `latexmk` works in a new terminal. In TexFlow → Settings, set **TeX bin directory** if needed (example: `C:\texlive\2024\bin\windows`). Open `C:\Repo_me\Leaf\tests\fixtures\article`, then **Compile**.

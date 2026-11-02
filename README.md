@@ -1,49 +1,34 @@
 # TexFlow
 
-Local-first LaTeX IDE. A project is an ordinary directory. TexFlow does not require an account, a cloud service, or a custom TeX engine.
+Local-first LaTeX IDE (working name). Projects are ordinary folders. The UI is a web app; a small Node companion on your machine runs `latexmk`. **No AI agent.**
 
-The Git repository may be named Leaf. The application name is TexFlow.
+License: [MIT](LICENSE).
 
-This branch includes Milestone 0 and Milestone 1: a browser workspace that opens a local folder, edits sources in Monaco, and previews an existing PDF. Compiling with TeX is Milestone 2. See [docs/ROADMAP.md](docs/ROADMAP.md).
+## Quick start (Windows)
 
-## License
+```bat
+cd C:\Repo_me\Leaf
+git pull
+npm install
+npm run dev
+```
 
-[MIT](LICENSE).
+1. Open http://127.0.0.1:5173
+2. Toolbar **Open** → paste `C:\Repo_me\Leaf\tests\fixtures\article`
+3. Edit, wait for autosave / **Save**, press **Compile**
+4. PDF appears on success; diagnostics are at the bottom
 
-## Documentation
+Need TeX Live with `latexmk` on `PATH` (or set **TeX bin directory** in Settings).
 
-Agents start at [AGENTS.md](AGENTS.md).
+## Docs
 
-- [Vision](docs/VISION.md)
-- [Requirements](docs/REQUIREMENTS.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Tech stack](docs/TECH_STACK.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Development](docs/DEVELOPMENT.md)
-- [Testing](docs/TESTING.md)
-- [Security](docs/SECURITY.md)
-- [Decisions](docs/decisions/0001-stack-and-repo-layout.md)
+Start at [AGENTS.md](AGENTS.md). Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Companion decision: [docs/decisions/0005-local-node-companion.md](docs/decisions/0005-local-node-companion.md).
 
-## Requirements
+## Scripts
 
-- Node.js 22 or newer
-- A current browser
-- TeX Live is not required yet
-
-## Commands
-
-From the repository root, after `npm install`:
-
-| Command                | What it does                                                           |
-| ---------------------- | ---------------------------------------------------------------------- |
-| `npm run dev`          | Start the app at <http://127.0.0.1:5173> (Chrome/Edge to open folders) |
-| `npm test`             | Unit tests                                                             |
-| `npm run lint`         | ESLint                                                                 |
-| `npm run typecheck`    | TypeScript                                                             |
-| `npm run format:check` | Prettier                                                               |
-| `npm run build`        | Production build in `dist/`                                            |
-| `./scripts/check.sh`   | The same checks CI runs                                                |
-
-## Layout
-
-The repository root is the Vite application. Source lives in `src/`. There is no nested project directory and no desktop host in this milestone.
+| Command                | Meaning            |
+| ---------------------- | ------------------ |
+| `npm run dev`          | UI + companion     |
+| `npm test`             | Unit tests         |
+| `npm run test:compile` | Real latexmk smoke |
+| `./scripts/check.sh`   | Full gate          |

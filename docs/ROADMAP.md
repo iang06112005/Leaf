@@ -1,50 +1,24 @@
 # Roadmap
 
-Implement only the milestone you were asked for. Later sections exist so the boundaries stay stable.
-
 ## Milestone 0 — Foundation
 
-This repository.
-
-- React, TypeScript, and Vite at the repository root.
-- A page: project sidebar, editor, preview, and a status strip. Placeholders only.
-- Formatter, linter, unit tests, and CI.
-- Docs, license, and ADRs.
-
-No project open, no editor engine, no PDF, no compiler, no desktop shell.
+Done: Vite/React shell, docs, CI.
 
 ## Milestone 1 — Workspace
 
-Implemented on the foundation branch.
+Done: open project, Monaco, PDF.js preview.
 
-- Shell beyond the placeholder.
-- Project explorer.
-- Open a local project directory via the File System Access API ([ADR 0004](decisions/0004-open-project-file-system-access.md)).
-- Monaco editor with explicit Save.
-- PDF.js viewer for existing project PDFs.
+## Milestone 2 / Prism-like loop (this branch)
 
-Still no compilation.
+Done / in progress on this PR:
 
-## Milestone 2 — Compiler
+- Node companion compile host
+- latexmk engines, cancel, logs, diagnostics
+- Autosave, CRUD files/folders, tree refresh polling
+- Settings, toolbar, resizable panels
+- PDF zoom/fit/pages/search/continuous scroll
+- SyncTeX flag via latexmk (viewer jump polish may continue)
 
-- Detect TeX Live.
-- A compiler interface that follows [decisions/0003-compiler-invocation.md](decisions/0003-compiler-invocation.md).
-- The process host is a separate decision. A static page cannot spawn `latexmk`.
-- `latexmk`, with `pdflatex`, `xelatex`, and `lualatex`.
-- Captured logs, build status, and diagnostics.
-- Show the PDF that the build produced.
-- Run against real projects, including images, bibliographies, and multi-pass builds. The trivial fixture in `tests/fixtures/` is not enough for this milestone.
+## Out of scope
 
-## Milestone 3 — Stabilize
-
-- Autosave that is an explicit, visible write.
-- File watching.
-- Navigation from a diagnostic to the source.
-- Settings, including shell-escape defaulting off and warned when enabled.
-- Packaging or hosting for the web app.
-- Regression coverage against non-trivial documents.
-- Docs that match the finished loop.
-
-## Out of the MVP
-
-Real-time collaboration, cloud storage, accounts, sharing, subscriptions, AI, bibliography search, mobile, a proprietary project format, and a custom TeX engine. SyncTeX is after compilation is stable. A desktop wrapper is not required unless a later decision says the browser cannot reach local TeX.
+Integrated AI agent, cloud sync, accounts, collab, mobile, proprietary format, custom TeX engine.

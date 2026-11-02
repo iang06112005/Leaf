@@ -1,24 +1,50 @@
 import { createContext } from "react";
-import type { ProjectTreeNode } from "../services/filesystem";
+import type { CompileResult, CompanionTreeNode, TexStatus } from "../services/companion";
+import type { Diagnostic } from "../services/diagnostics";
+import type { AppSettings } from "../services/settings";
 
-export type WorkspaceStatus = "idle" | "loading" | "ready" | "unsupported" | "error";
+export type WorkspaceStatus = "idle" | "loading" | "ready" | "error";
+export type BuildState = "idle" | "running" | "success" | "failed" | "cancelled";
 
 export type WorkspaceContextValue = {
+  companionOnline: boolean;
   status: WorkspaceStatus;
   message: string | null;
+  projectPath: string | null;
   projectName: string | null;
-  tree: ProjectTreeNode[];
+  tree: CompanionTreeNode[];
   openPath: string | null;
   openContent: string;
   dirty: boolean;
+  saving: boolean;
   previewPath: string | null;
   previewBytes: Uint8Array | null;
-  canOpen: boolean;
-  openProject: () => Promise<void>;
+  settings: AppSettings;
+  texStatus: TexStatus | null;
+  buildState: BuildState;
+  buildLog: string;
+  buildResult: CompileResult | null;
+  diagnostics: Diagnostic[];
+  sidebarCollapsed: boolean;
+  settingsOpen: boolean;
+  jumpRequest: { path: string; line: number; token: number } | null;
+  openProject: (explicitPath?: string) => Promise<void>;
   openFile: (path: string) => Promise<void>;
   setOpenContent: (value: string) => void;
   saveOpenFile: () => Promise<void>;
   refreshTree: () => Promise<void>;
+  createFile: (relativePath: string) => Promise<void>;
+  createFolder: (relativePath: string) => Promise<void>;
+  renameEntry: (from: string, to: string) => Promise<void>;
+  deleteEntry: (target: string) => Promise<void>;
+  compile: () => Promise<void>;
+  stopCompile: () => Promise<void>;
+  updateSettings: (patch: Partial<AppSettings>) => void;
+  setSidebarCollapsed: (value: boolean) => void;
+  setSettingsOpen: (value: boolean) => void;
+  jumpToDiagnostic: (diagnostic: Diagnostic) => void;
+  clearJumpRequest: () => void;
+  refreshTexStatus: () => Promise<void>;
 };
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);

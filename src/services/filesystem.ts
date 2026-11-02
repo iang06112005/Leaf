@@ -142,8 +142,12 @@ export function projectDisplayName(root: FileSystemDirectoryHandle): string {
   return root.name || basename("project");
 }
 
-export function flattenFiles(nodes: ProjectTreeNode[]): ProjectFileNode[] {
-  const files: ProjectFileNode[] = [];
+type TreeLike =
+  | { kind: "file"; name: string; path: string }
+  | { kind: "directory"; name: string; path: string; children: TreeLike[] };
+
+export function flattenFiles(nodes: TreeLike[]): { name: string; path: string }[] {
+  const files: { name: string; path: string }[] = [];
   for (const node of nodes) {
     if (node.kind === "file") {
       files.push(node);
@@ -154,7 +158,7 @@ export function flattenFiles(nodes: ProjectTreeNode[]): ProjectFileNode[] {
   return files;
 }
 
-export function findPreferredPdf(nodes: ProjectTreeNode[]): string | null {
+export function findPreferredPdf(nodes: TreeLike[]): string | null {
   const files = flattenFiles(nodes).filter((file) => file.name.toLowerCase().endsWith(".pdf"));
   if (files.length === 0) return null;
 
@@ -165,7 +169,7 @@ export function findPreferredPdf(nodes: ProjectTreeNode[]): string | null {
   return files[0]?.path ?? null;
 }
 
-export function findPreferredTex(nodes: ProjectTreeNode[]): string | null {
+export function findPreferredTex(nodes: TreeLike[]): string | null {
   const files = flattenFiles(nodes).filter((file) => file.name.toLowerCase().endsWith(".tex"));
   if (files.length === 0) return null;
 

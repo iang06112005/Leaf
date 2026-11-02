@@ -1,10 +1,10 @@
 import { ChevronDown, ChevronRight, FileText, Folder } from "lucide-react";
 import { useState } from "react";
-import type { ProjectTreeNode } from "../services/filesystem";
+import type { CompanionTreeNode } from "../services/companion";
 import { isPdfProjectFile, isTextProjectFile } from "../services/fileKinds";
 
 type FileTreeProps = {
-  nodes: ProjectTreeNode[];
+  nodes: CompanionTreeNode[];
   activePath: string | null;
   previewPath: string | null;
   onOpen: (path: string) => void;
@@ -21,7 +21,7 @@ function TreeNode({
   onOpen,
   depth,
 }: {
-  node: ProjectTreeNode;
+  node: CompanionTreeNode;
   activePath: string | null;
   previewPath: string | null;
   onOpen: (path: string) => void;
@@ -76,7 +76,7 @@ function TreeNode({
       onClick={() => {
         if (openable) onOpen(node.path);
       }}
-      title={openable ? node.path : "This file type is not opened in Milestone 1"}
+      title={node.path}
     >
       <span className="size-3.5 shrink-0" aria-hidden="true" />
       <FileText className="size-3.5 shrink-0 text-zinc-500" aria-hidden="true" />

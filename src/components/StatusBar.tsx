@@ -2,18 +2,37 @@ import { appLabel } from "../appLabel";
 import { useWorkspace } from "../workspace/useWorkspace";
 
 export function StatusBar() {
-  const { status, projectName, openPath, dirty, message } = useWorkspace();
+  const {
+    companionOnline,
+    status,
+    projectName,
+    openPath,
+    dirty,
+    message,
+    buildState,
+    buildResult,
+    settings,
+  } = useWorkspace();
 
-  const readyLabel =
-    status === "loading" ? "Opening…" : status === "unsupported" ? "Unsupported browser" : "Ready";
+  const readyLabel = !companionOnline
+    ? "Companion offline"
+    : status === "loading"
+      ? "Opening…"
+      : buildState === "running"
+        ? "Building…"
+        : "Ready";
 
   const projectLabel = projectName
     ? dirty && openPath
-      ? `${projectName} · ${openPath} (unsaved)`
+      ? `${projectName} · ${openPath} (dirty)`
       : openPath
         ? `${projectName} · ${openPath}`
         : projectName
     : "No project";
+
+  const buildLabel = buildResult
+    ? `last build ${buildResult.ok ? "ok" : "fail"} ${(buildResult.durationMs / 1000).toFixed(1)}s exit ${buildResult.code ?? "?"}`
+    : settings.engine;
 
   return (
     <footer
@@ -22,6 +41,7 @@ export function StatusBar() {
     >
       <span className="truncate">{message ?? readyLabel}</span>
       <span className="truncate">{projectLabel}</span>
+      <span className="truncate">{buildLabel}</span>
       <span className="truncate">{appLabel()}</span>
     </footer>
   );

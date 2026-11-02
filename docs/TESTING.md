@@ -1,39 +1,29 @@
 # Testing
 
-## What runs today
-
 ```bash
 npm test
 npm run lint
 npm run typecheck
 npm run build
-npm run format:check
+npm run test:compile   # needs latexmk
+./scripts/check.sh
 ```
 
-Vitest covers:
+## Fixtures
 
-- `src/appLabel.test.ts`
-- `src/services/paths.test.ts` — spaces and non-ASCII segments
-- `src/services/fileKinds.test.ts`
-- `src/services/filesystem.test.ts` — preferred `main.tex` / `main.pdf`
+| Path                     | Purpose                                          |
+| ------------------------ | ------------------------------------------------ |
+| `tests/fixtures/minimal` | Tiny single-file document                        |
+| `tests/fixtures/article` | Multi-file + bibliography (`refs.bib`, `\input`) |
 
-`./scripts/check.sh` matches `.github/workflows/ci.yml`.
+## Manual UI
 
-## Manual checks for the workspace
+1. `npm run dev`
+2. Open absolute path to `tests/fixtures/article`
+3. Confirm Monaco loads `main.tex`, autosave dirty→saved
+4. Compile → PDF preview refreshes on success
+5. Click a diagnostic (if any) → editor jumps
 
-In Chrome or Edge:
+## Companion unit tests
 
-1. `npm run dev` → http://127.0.0.1:5173
-2. Open folder → pick `tests/fixtures/minimal` (or any folder with `.tex` / `.pdf`)
-3. Confirm the tree lists files, Monaco shows `main.tex`, Save writes only after you click Save
-4. If a PDF is present, the preview renders page 1; otherwise click a `.pdf` in the tree
-
-Firefox and Safari should show that Open folder is unsupported. That is expected.
-
-## Fixture
-
-`tests/fixtures/minimal/main.tex` is a normal one-file LaTeX document. It is not a TexFlow project format. Milestone 2 still needs real multi-file documents for compilation tests.
-
-## Not running yet
-
-Playwright is not installed. Add it when the open/edit/preview loop needs regression coverage in CI. Do not claim compilation works — it does not exist yet.
+`node --test companion/lib/tex.test.mjs` covers structured latexmk argv (including shell-escape and path rejection).

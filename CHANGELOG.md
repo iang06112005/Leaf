@@ -1,12 +1,14 @@
 # Changelog
 
-All notable changes to TexFlow are documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 ## [Unreleased]
 
 ### Added
 
-- Milestone 1 workspace: open a local folder (File System Access API), project tree, Monaco editor with explicit Save, and PDF.js preview for existing PDFs.
-- Milestone 0 foundation: browser shell, documentation, formatting, linting, unit tests, and CI.
+- Local Node companion for project I/O and `latexmk` (localhost only).
+- Compile toolbar: engine select, Compile/Stop, TeX status, settings.
+- Autosave, dirty indicator, create/rename/delete files and folders.
+- Diagnostics panel with click-to-source and build log.
+- PDF.js continuous preview with zoom, fit, page jump, search; refresh on successful compile.
+- Settings for TeX bin, root file, output dir, autosave, font size, PDF scale, SyncTeX flag, shell-escape warning.
+- Non-trivial fixture `tests/fixtures/article` and `npm run test:compile`.
+- Milestone 1 workspace and Milestone 0 foundation.

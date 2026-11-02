@@ -1,11 +1,45 @@
-import Editor from "@monaco-editor/react";
+import Editor, { type OnMount } from "@monaco-editor/react";
 import { FileCode2, Save } from "lucide-react";
+import { useEffect, useRef } from "react";
+import type { editor as MonacoEditor } from "monaco-editor";
 import { monacoLanguageFor } from "../services/fileKinds";
 import { useWorkspace } from "../workspace/useWorkspace";
 import { Panel } from "./ui/Panel";
 
 export function EditorPane() {
-  const { openPath, openContent, dirty, setOpenContent, saveOpenFile } = useWorkspace();
+  const {
+    openPath,
+    openContent,
+    dirty,
+    setOpenContent,
+    saveOpenFile,
+    settings,
+    jumpRequest,
+    openFile,
+    clearJumpRequest,
+  } = useWorkspace();
+  const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
+
+  const onMount: OnMount = (editor) => {
+    editorRef.current = editor;
+  };
+
+  useEffect(() => {
+    if (!jumpRequest) return;
+    void (async () => {
+      if (openPath !== jumpRequest.path) {
+        await openFile(jumpRequest.path);
+      }
+      window.setTimeout(() => {
+        const editor = editorRef.current;
+        if (!editor) return;
+        editor.revealLineInCenter(jumpRequest.line);
+        editor.setPosition({ lineNumber: jumpRequest.line, column: 1 });
+        editor.focus();
+        clearJumpRequest();
+      }, 50);
+    })();
+  }, [clearJumpRequest, jumpRequest, openFile, openPath]);
 
   return (
     <Panel
@@ -39,10 +73,12 @@ export function EditorPane() {
               path={openPath}
               language={monacoLanguageFor(openPath)}
               value={openContent}
+              onMount={onMount}
               onChange={(value) => setOpenContent(value ?? "")}
               options={{
                 automaticLayout: true,
-                fontSize: 14,
+                fontSize: settings.editorFontSize,
+                fontFamily: settings.editorFontFamily,
                 minimap: { enabled: false },
                 scrollBeyondLastLine: false,
                 wordWrap: "on",

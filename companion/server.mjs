@@ -93,6 +93,27 @@ async function handle(req, res) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/project/exists") {
+      const raw = url.searchParams.get("path") || "";
+      if (!raw) {
+        sendJson(res, 400, { error: "Missing path." });
+        return;
+      }
+      let projectPath;
+      try {
+        projectPath = assertAbsolutePath(raw);
+      } catch (error) {
+        sendJson(res, 200, {
+          path: raw,
+          exists: false,
+          error: error instanceof Error ? error.message : "Invalid path.",
+        });
+        return;
+      }
+      sendJson(res, 200, { path: projectPath, exists: await pathExists(projectPath) });
+      return;
+    }
+
     if (req.method === "POST" && pathname === "/api/project/open") {
       const body = await readJson(req);
       let projectPath = body.path || null;

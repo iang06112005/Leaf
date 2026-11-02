@@ -12,6 +12,7 @@ import {
   openPdfInOs,
   openProject as companionOpenProject,
   pickProject,
+  projectExists,
   readBinary,
   readText,
   renamePath,
@@ -37,8 +38,10 @@ import { parseLatexLog, type Diagnostic } from "../services/diagnostics";
 import { isPdfProjectFile, isTextProjectFile } from "../services/fileKinds";
 import { findPreferredPdf, findPreferredTex, flattenFiles } from "../services/filesystem";
 import {
+  dropProjectFromHistory,
   loadSettings,
   pushRecentProject,
+  restoreProjectCandidates,
   saveSettings,
   type AppSettings,
 } from "../services/settings";
@@ -99,6 +102,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const compileOnSaveTimer = useRef<number | null>(null);
   const compileRef = useRef<() => Promise<void>>(async () => undefined);
   const buildStateRef = useRef<BuildState>("idle");
+  const restoreAttemptedRef = useRef(false);
 
   const activeTab = tabs.find((tab) => tab.path === openPath) ?? null;
   const openContent = activeTab?.content ?? "";
@@ -271,6 +275,50 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     },
     [loadPreview, loadText, refreshTexStatus, settings.rootFile],
   );
+
+  useEffect(() => {
+    if (restoreAttemptedRef.current || projectPath || !companionOnline) return;
+
+    const candidates = restoreProjectCandidates(settings);
+    if (candidates.length === 0) {
+      restoreAttemptedRef.current = true;
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      for (const candidate of candidates) {
+        if (cancelled) return;
+        try {
+          const check = await projectExists(candidate);
+          if (!check.exists) {
+            setSettings((current) => dropProjectFromHistory(current, candidate));
+            continue;
+          }
+          setStatus("loading");
+          setMessage("Reopening last project…");
+          const opened = await companionOpenProject(candidate);
+          if (cancelled) return;
+          await applyOpenedProject(opened);
+          restoreAttemptedRef.current = true;
+          return;
+        } catch {
+          setSettings((current) => dropProjectFromHistory(current, candidate));
+        }
+      }
+      if (cancelled) return;
+      restoreAttemptedRef.current = true;
+      setStatus("idle");
+      setMessage(null);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // One-shot boot restore: last/recent paths via companion exists check.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- boot restore only
+  }, [companionOnline, projectPath]);
 
   const openProject = useCallback(
     async (explicitPath?: string) => {

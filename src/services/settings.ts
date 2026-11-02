@@ -76,3 +76,29 @@ export function pushRecentProject(settings: AppSettings, projectPath: string): A
     recentProjects: next,
   };
 }
+
+/** Absolute paths to try when restoring a project after reload (last first, then recent). */
+export function restoreProjectCandidates(settings: AppSettings): string[] {
+  const out: string[] = [];
+  const push = (path: string | undefined) => {
+    const trimmed = path?.trim();
+    if (!trimmed || out.includes(trimmed)) return;
+    out.push(trimmed);
+  };
+  push(settings.lastProjectPath);
+  for (const path of settings.recentProjects) push(path);
+  return out;
+}
+
+/** Drop a missing folder from last/recent so boot does not keep retrying it. */
+export function dropProjectFromHistory(settings: AppSettings, projectPath: string): AppSettings {
+  const lastProjectPath = settings.lastProjectPath === projectPath ? "" : settings.lastProjectPath;
+  const recentProjects = settings.recentProjects.filter((item) => item !== projectPath);
+  if (
+    lastProjectPath === settings.lastProjectPath &&
+    recentProjects.length === settings.recentProjects.length
+  ) {
+    return settings;
+  }
+  return { ...settings, lastProjectPath, recentProjects };
+}

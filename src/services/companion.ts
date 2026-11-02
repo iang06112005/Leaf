@@ -71,6 +71,12 @@ export function getTexStatus(texBinDir?: string) {
   return request<TexStatus>(`/api/tex${query}`);
 }
 
+export function projectExists(projectPath: string) {
+  return request<{ path: string; exists: boolean }>(
+    `/api/project/exists?path=${encodeURIComponent(projectPath)}`,
+  );
+}
+
 export function openProject(path?: string) {
   return request<{ path: string; name: string; tree: CompanionTreeNode[] }>("/api/project/open", {
     method: "POST",

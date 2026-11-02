@@ -20,6 +20,22 @@ dist-ssr
 # TypeScript
 *.tsbuildinfo
 
+# LaTeX intermediates / fixture build products
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+tests/fixtures/**/*.pdf
+*.synctex(busy)
+
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

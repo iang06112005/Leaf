@@ -3,6 +3,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { cleanProjectArtifacts } from "./lib/clean.mjs";
 import { cancelCompile, getJob, startCompile } from "./lib/compile.mjs";
 import { pickDirectory } from "./lib/dialog.mjs";
 import {
@@ -19,6 +20,7 @@ import {
 import { openPathInOs, openProjectFileInOs, pdfAbsolutePath } from "./lib/open.mjs";
 import { assertAbsolutePath } from "./lib/paths.mjs";
 import { synctexForward, synctexInverse } from "./lib/synctex.mjs";
+import { createProjectFromTemplate, TEMPLATES } from "./lib/template.mjs";
 import { detectTeX } from "./lib/tex.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -316,6 +318,54 @@ async function handle(req, res) {
         name: path.basename(projectPath),
         tree: await buildTree(projectPath),
       });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/project/templates") {
+      sendJson(
+        res,
+        200,
+        TEMPLATES.map((item) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+        })),
+      );
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/project/new") {
+      const body = await readJson(req);
+      let projectPath = body.path || null;
+      if (!projectPath) {
+        projectPath = await pickDirectory();
+      }
+      if (!projectPath) {
+        sendJson(res, 400, {
+          error:
+            "No folder path given. Paste an absolute empty directory path for the new project.",
+        });
+        return;
+      }
+      const created = await createProjectFromTemplate({
+        projectPath,
+        templateId: body.templateId || "article",
+        force: Boolean(body.force),
+      });
+      sendJson(res, 200, {
+        ...created,
+        tree: await buildTree(created.path),
+      });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/project/clean") {
+      const body = await readJson(req);
+      const projectPath = assertAbsolutePath(body.path || "");
+      const result = await cleanProjectArtifacts(projectPath, {
+        outputDir: body.outputDir || null,
+      });
+      sendJson(res, 200, result);
       return;
     }
 

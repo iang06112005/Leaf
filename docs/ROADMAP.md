@@ -18,7 +18,9 @@ Done on this PR:
 - Settings, toolbar, resizable panels, dark/light themes
 - Multi editor tabs, unsaved guards, recent projects
 - PDF zoom/fit/pages/search, OS open, SyncTeX forward/inverse
-- Image fixture + xelatex compile smoke
+- Image fixture + xelatex compile smoke (skipped in CI when XeTeX missing)
+- New project from Article template, compile-on-save, section outline
+- Clean aux, build history, cursor Ln/Col, diagnostic filters
 
 ## Out of scope
 

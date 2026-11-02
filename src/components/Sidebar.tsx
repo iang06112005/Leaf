@@ -1,6 +1,7 @@
-import { FilePlus2, FolderPlus, FolderTree, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { Eraser, FilePlus2, FolderPlus, FolderTree, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { useWorkspace } from "../workspace/useWorkspace";
 import { FileTree } from "./FileTree";
+import { OutlinePanel } from "./OutlinePanel";
 import { Panel } from "./ui/Panel";
 
 export function Sidebar() {
@@ -17,6 +18,7 @@ export function Sidebar() {
     createFolder,
     renameEntry,
     deleteEntry,
+    cleanArtifacts,
   } = useWorkspace();
 
   return (
@@ -95,6 +97,17 @@ export function Sidebar() {
               <Trash2 className="size-3" aria-hidden="true" />
               Delete
             </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded border border-[var(--tf-border)] px-2 py-1 text-xs hover:bg-[var(--tf-accent)]"
+              title="Delete TeX auxiliary files (keeps PDF)"
+              onClick={() => {
+                void cleanArtifacts();
+              }}
+            >
+              <Eraser className="size-3" aria-hidden="true" />
+              Clean
+            </button>
           </div>
           <p className="truncate text-xs font-medium uppercase tracking-wide text-[var(--tf-muted)]">
             {projectName}
@@ -109,11 +122,13 @@ export function Sidebar() {
               }}
             />
           </div>
+          <OutlinePanel />
         </div>
       ) : (
         <p className="text-sm text-[var(--tf-muted)]">
-          Use <strong>Open</strong> in the toolbar. Prefer an absolute path like{" "}
-          <code className="text-[var(--tf-text)]">C:\Repo_me\Leaf\tests\fixtures\article</code>.
+          Use <strong>Open</strong> or <strong>New</strong> in the toolbar. Prefer an absolute path
+          like <code className="text-[var(--tf-text)]">C:\Repo_me\Leaf\tests\fixtures\article</code>
+          .
         </p>
       )}
     </Panel>

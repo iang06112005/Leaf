@@ -17,14 +17,16 @@ npm run test:compile   # needs latexmk (+ xelatex for engine proof)
 | `tests/fixtures/article`    | Multi-file + bibliography (`refs.bib`, `\input`) |
 | `tests/fixtures/with-image` | PNG via `graphicx` (also used for xelatex smoke) |
 
+`test:compile` always runs article + with-image under pdflatex. The xelatex case runs only when `xelatex` is on `PATH` (skipped cleanly on GitHub CI).
+
 ## Manual UI
 
 1. `npm run dev`
-2. Open absolute path to `tests/fixtures/article` (or use **Open** / Recent)
-3. Confirm Monaco loads `main.tex`, tabs work, autosave dirty→saved
-4. Compile (`Ctrl/Cmd+Enter`) → Log tab streams, PDF preview refreshes
-5. Toggle theme; click PDF for inverse SyncTeX; editor SyncTeX for forward
-6. **Open in OS** on the PDF; change engine to xelatex and recompile `with-image`
+2. Open absolute path to `tests/fixtures/article` (or use **Open** / **New** / Recent)
+3. Confirm Monaco loads `main.tex`, tabs work, outline jumps, autosave dirty→saved
+4. Compile (`Ctrl/Cmd+Enter`) → Log / History tabs; filter Problems by errors/warnings
+5. Toggle theme; SyncTeX; **Open in OS**; **Clean** aux; optional compile-on-save in Settings
+6. Status bar shows `Ln/Col`; try `with-image` (pdflatex always; xelatex if installed)
 
 ## Companion unit tests
 

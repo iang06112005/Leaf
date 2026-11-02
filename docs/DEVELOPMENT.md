@@ -32,7 +32,7 @@ Shortcuts: `Ctrl/Cmd+Enter` compile (or stop while running), `Ctrl/Cmd+S` save, 
 ./scripts/check.sh
 ```
 
-`test:compile` runs when `latexmk` is on `PATH` (article + with-image + xelatex).
+`test:compile` runs when `latexmk` is on `PATH` (article + with-image pdflatex required; xelatex optional).
 
 ## Windows (Ian)
 

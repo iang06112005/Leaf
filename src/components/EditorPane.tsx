@@ -19,11 +19,22 @@ export function EditorPane() {
     openFile,
     clearJumpRequest,
     syncTexForward,
+    setCursorPosition,
   } = useWorkspace();
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
+    const syncCursor = () => {
+      const position = editor.getPosition();
+      if (!position) {
+        setCursorPosition(null);
+        return;
+      }
+      setCursorPosition({ line: position.lineNumber, column: position.column });
+    };
+    syncCursor();
+    editor.onDidChangeCursorPosition(syncCursor);
   };
 
   useEffect(() => {

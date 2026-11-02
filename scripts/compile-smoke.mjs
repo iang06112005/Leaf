@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
  * Smoke-test the companion compile path against fixtures.
- * Requires latexmk on PATH. Proves pdflatex (article), graphicx (with-image),
- * and xelatex (with-image).
+ * Requires latexmk + pdflatex on PATH.
+ * xelatex is optional: skipped cleanly when the binary is missing (CI has no XeTeX).
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { startCompile, getJob } from "../companion/lib/compile.mjs";
+import { detectTeX } from "../companion/lib/tex.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -50,6 +51,12 @@ async function runOne({ label, projectDir, engine }) {
   };
 }
 
+const tex = await detectTeX({});
+if (!tex.ok || !tex.engines.pdflatex) {
+  console.error("pdflatex/latexmk required for compile smoke.");
+  process.exit(1);
+}
+
 const results = [];
 results.push(
   await runOne({ label: "article-pdflatex", projectDir: "article", engine: "pdflatex" }),
@@ -57,8 +64,19 @@ results.push(
 results.push(
   await runOne({ label: "with-image-pdflatex", projectDir: "with-image", engine: "pdflatex" }),
 );
-results.push(
-  await runOne({ label: "with-image-xelatex", projectDir: "with-image", engine: "xelatex" }),
-);
+
+if (tex.engines.xelatex) {
+  results.push(
+    await runOne({ label: "with-image-xelatex", projectDir: "with-image", engine: "xelatex" }),
+  );
+} else {
+  results.push({
+    label: "with-image-xelatex",
+    ok: true,
+    skipped: true,
+    reason: "xelatex not found on PATH",
+  });
+  console.warn("Skipping with-image-xelatex: xelatex not found on PATH");
+}
 
 console.log(JSON.stringify({ ok: true, results }, null, 2));

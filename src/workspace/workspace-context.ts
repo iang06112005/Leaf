@@ -5,16 +5,24 @@ import type {
   SynctexForwardResult,
   TexStatus,
 } from "../services/companion";
+import type { BuildHistoryEntry } from "../services/buildHistory";
 import type { Diagnostic } from "../services/diagnostics";
 import type { AppSettings } from "../services/settings";
 
 export type WorkspaceStatus = "idle" | "loading" | "ready" | "error";
 export type BuildState = "idle" | "running" | "success" | "failed" | "cancelled";
+export type BottomTab = "problems" | "log" | "history";
+export type DiagnosticFilter = "all" | "errors" | "warnings";
 
 export type EditorTab = {
   path: string;
   content: string;
   savedContent: string;
+};
+
+export type CursorPosition = {
+  line: number;
+  column: number;
 };
 
 export type WorkspaceContextValue = {
@@ -38,15 +46,19 @@ export type WorkspaceContextValue = {
   buildLog: string;
   buildStartedAt: number | null;
   buildResult: CompileResult | null;
+  buildHistory: BuildHistoryEntry[];
   diagnostics: Diagnostic[];
+  diagnosticFilter: DiagnosticFilter;
   sidebarCollapsed: boolean;
   settingsOpen: boolean;
-  bottomTab: "problems" | "log";
+  bottomTab: BottomTab;
   jumpRequest: { path: string; line: number; token: number } | null;
   pdfFocus: SynctexForwardResult | null;
+  cursorPosition: CursorPosition | null;
   openProject: (explicitPath?: string) => Promise<void>;
   openProjectPicker: () => Promise<void>;
   openRecent: (path: string) => Promise<void>;
+  newProjectFromTemplate: () => Promise<void>;
   openFile: (path: string) => Promise<void>;
   closeTab: (path: string) => Promise<void>;
   setActiveTab: (path: string) => void;
@@ -58,19 +70,24 @@ export type WorkspaceContextValue = {
   createFolder: (relativePath: string) => Promise<void>;
   renameEntry: (from: string, to: string) => Promise<void>;
   deleteEntry: (target: string) => Promise<void>;
+  cleanArtifacts: () => Promise<void>;
   compile: () => Promise<void>;
   stopCompile: () => Promise<void>;
   updateSettings: (patch: Partial<AppSettings>) => void;
   setSidebarCollapsed: (value: boolean) => void;
   setSettingsOpen: (value: boolean) => void;
-  setBottomTab: (value: "problems" | "log") => void;
+  setBottomTab: (value: BottomTab) => void;
+  setDiagnosticFilter: (value: DiagnosticFilter) => void;
+  setCursorPosition: (value: CursorPosition | null) => void;
   jumpToDiagnostic: (diagnostic: Diagnostic) => void;
+  jumpToLine: (line: number, path?: string) => void;
   clearJumpRequest: () => void;
   refreshTexStatus: () => Promise<void>;
   openPdfExternally: () => Promise<void>;
   syncTexForward: (line: number, column?: number) => Promise<void>;
   syncTexInverse: (page: number, x: number, y: number) => Promise<void>;
   clearPdfFocus: () => void;
+  clearBuildHistory: () => void;
 };
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);

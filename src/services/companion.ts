@@ -243,3 +243,33 @@ export function synctexInverse(body: {
     body: JSON.stringify(body),
   });
 }
+
+export type ProjectTemplateInfo = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+export function listTemplates() {
+  return request<ProjectTemplateInfo[]>("/api/project/templates");
+}
+
+export function createProject(body: { path: string; templateId?: string; force?: boolean }) {
+  return request<{
+    path: string;
+    name: string;
+    templateId: string;
+    files: string[];
+    tree: CompanionTreeNode[];
+  }>("/api/project/new", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function cleanProject(body: { path: string; outputDir?: string | null }) {
+  return request<{ ok: boolean; removed: string[]; count: number }>("/api/project/clean", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}

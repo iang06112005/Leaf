@@ -12,6 +12,7 @@ export function StatusBar() {
     buildState,
     buildResult,
     settings,
+    cursorPosition,
   } = useWorkspace();
 
   const readyLabel = !companionOnline
@@ -34,6 +35,10 @@ export function StatusBar() {
     ? `last build ${buildResult.ok ? "ok" : "fail"} ${(buildResult.durationMs / 1000).toFixed(1)}s exit ${buildResult.code ?? "?"}`
     : settings.engine;
 
+  const cursorLabel = cursorPosition
+    ? `Ln ${cursorPosition.line}, Col ${cursorPosition.column}`
+    : "Ln —, Col —";
+
   return (
     <footer
       aria-label="Status"
@@ -41,6 +46,7 @@ export function StatusBar() {
     >
       <span className="truncate">{message ?? readyLabel}</span>
       <span className="truncate">{projectLabel}</span>
+      <span className="shrink-0 font-mono">{cursorLabel}</span>
       <span className="truncate">{buildLabel}</span>
       <span className="truncate">{appLabel()}</span>
     </footer>

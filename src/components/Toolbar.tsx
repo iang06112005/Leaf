@@ -1,4 +1,5 @@
 import {
+  FilePlus,
   FolderOpen,
   Moon,
   PanelLeftClose,
@@ -27,6 +28,7 @@ export function Toolbar() {
     texStatus,
     openProjectPicker,
     openRecent,
+    newProjectFromTemplate,
     saveOpenFile,
     saveAll,
     compile,
@@ -80,6 +82,18 @@ export function Toolbar() {
       >
         <FolderOpen className="size-3.5" aria-hidden="true" />
         Open
+      </button>
+
+      <button
+        type="button"
+        className="inline-flex items-center gap-1.5 rounded border border-[var(--tf-border)] bg-[var(--tf-panel-2)] px-2 py-1 hover:bg-[var(--tf-accent)]"
+        title="Create ordinary folder from Article template"
+        onClick={() => {
+          void newProjectFromTemplate();
+        }}
+      >
+        <FilePlus className="size-3.5" aria-hidden="true" />
+        New
       </button>
 
       {settings.recentProjects.length > 0 ? (

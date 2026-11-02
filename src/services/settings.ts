@@ -7,6 +7,7 @@ export type AppSettings = {
   rootFile: string;
   autosave: boolean;
   autosaveDelayMs: number;
+  compileOnSave: boolean;
   editorFontSize: number;
   editorFontFamily: string;
   pdfScale: number;
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   rootFile: "main.tex",
   autosave: true,
   autosaveDelayMs: 800,
+  compileOnSave: false,
   editorFontSize: 14,
   editorFontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
   pdfScale: 1.25,
@@ -45,6 +47,7 @@ export function loadSettings(): AppSettings {
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      compileOnSave: Boolean(parsed.compileOnSave),
       recentProjects: Array.isArray(parsed.recentProjects) ? parsed.recentProjects : [],
     };
   } catch {

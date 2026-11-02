@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   cancelCompile,
+  cleanProject,
   companionHealth,
   createDir,
   createFile as companionCreateFile,
+  createProject,
   deletePath,
   fetchTree,
   getTexStatus,
@@ -23,6 +25,12 @@ import {
   type SynctexForwardResult,
   type TexStatus,
 } from "../services/companion";
+import {
+  appendBuildHistory,
+  loadBuildHistory,
+  persistBuildHistory,
+  type BuildHistoryEntry,
+} from "../services/buildHistory";
 import { parseLatexLog, type Diagnostic } from "../services/diagnostics";
 import { isPdfProjectFile, isTextProjectFile } from "../services/fileKinds";
 import { findPreferredPdf, findPreferredTex } from "../services/filesystem";
@@ -34,7 +42,10 @@ import {
 } from "../services/settings";
 import {
   WorkspaceContext,
+  type BottomTab,
   type BuildState,
+  type CursorPosition,
+  type DiagnosticFilter,
   type EditorTab,
   type WorkspaceContextValue,
   type WorkspaceStatus,
@@ -51,6 +62,10 @@ function flattenFiles(nodes: CompanionTreeNode[]): { name: string; path: string 
 
 function tabDirty(tab: EditorTab): boolean {
   return tab.content !== tab.savedContent;
+}
+
+function isTexPath(filePath: string | null | undefined): boolean {
+  return Boolean(filePath && /\.tex$/i.test(filePath));
 }
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
@@ -71,20 +86,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [buildLog, setBuildLog] = useState("");
   const [buildStartedAt, setBuildStartedAt] = useState<number | null>(null);
   const [buildResult, setBuildResult] = useState<CompileResult | null>(null);
+  const [buildHistory, setBuildHistory] = useState<BuildHistoryEntry[]>(() => loadBuildHistory());
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
+  const [diagnosticFilter, setDiagnosticFilter] = useState<DiagnosticFilter>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [bottomTab, setBottomTab] = useState<"problems" | "log">("problems");
+  const [bottomTab, setBottomTab] = useState<BottomTab>("problems");
   const [jumpRequest, setJumpRequest] = useState<WorkspaceContextValue["jumpRequest"]>(null);
   const [pdfFocus, setPdfFocus] = useState<SynctexForwardResult | null>(null);
+  const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   const jobIdRef = useRef<string | null>(null);
   const stopStreamRef = useRef<(() => void) | null>(null);
   const pollRef = useRef<number | null>(null);
+  const compileOnSaveTimer = useRef<number | null>(null);
+  const compileRef = useRef<() => Promise<void>>(async () => undefined);
+  const buildStateRef = useRef<BuildState>("idle");
 
   const activeTab = tabs.find((tab) => tab.path === openPath) ?? null;
   const openContent = activeTab?.content ?? "";
   const dirty = activeTab ? tabDirty(activeTab) : false;
   const anyDirty = tabs.some(tabDirty);
+
+  useEffect(() => {
+    buildStateRef.current = buildState;
+  }, [buildState]);
 
   const refreshTexStatus = useCallback(async () => {
     if (!(await companionHealth())) {
@@ -175,6 +200,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     };
   }, [companionOnline, projectPath]);
 
+  const scheduleCompileOnSave = useCallback(() => {
+    if (!settings.compileOnSave) return;
+    if (compileOnSaveTimer.current) window.clearTimeout(compileOnSaveTimer.current);
+    compileOnSaveTimer.current = window.setTimeout(() => {
+      if (buildStateRef.current === "running") return;
+      void compileRef.current();
+    }, 400);
+  }, [settings.compileOnSave]);
+
   const applyOpenedProject = useCallback(
     async (opened: { path: string; name: string; tree: CompanionTreeNode[] }) => {
       setProjectPath(opened.path);
@@ -190,6 +224,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setBuildState("idle");
       setBuildStartedAt(null);
       setPdfFocus(null);
+      setCursorPosition(null);
       setSettings((current) => pushRecentProject(current, opened.path));
 
       const preferredRoot =
@@ -287,6 +322,48 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [openProject],
   );
 
+  const newProjectFromTemplate = useCallback(async () => {
+    setStatus("loading");
+    setMessage("Creating project from template…");
+    try {
+      if (!(await companionHealth())) {
+        throw new Error("Companion offline — start npm run companion.");
+      }
+      if (anyDirty) {
+        const proceed = window.confirm("You have unsaved changes. Create a new project anyway?");
+        if (!proceed) {
+          setStatus(projectPath ? "ready" : "idle");
+          setMessage(null);
+          return;
+        }
+      }
+      const suggested =
+        settings.lastProjectPath?.replace(/[/\\][^/\\]+$/, "") ||
+        (typeof navigator !== "undefined" && /Win/i.test(navigator.userAgent)
+          ? "C:\\Repo_me\\my-paper"
+          : "");
+      const target = window.prompt(
+        "Absolute path for the new empty project folder (ordinary directory):",
+        suggested,
+      );
+      if (!target?.trim()) {
+        setStatus(projectPath ? "ready" : "idle");
+        setMessage(null);
+        return;
+      }
+      const created = await createProject({
+        path: target.trim(),
+        templateId: "article",
+      });
+      await applyOpenedProject(created);
+      setSettings((current) => ({ ...current, rootFile: "main.tex" }));
+      setMessage(`Created project from Article template at ${created.path}`);
+    } catch (error) {
+      setStatus(projectPath ? "ready" : "error");
+      setMessage(error instanceof Error ? error.message : "Could not create project.");
+    }
+  }, [anyDirty, applyOpenedProject, projectPath, settings.lastProjectPath]);
+
   const setActiveTab = useCallback((path: string) => {
     setOpenPath(path);
   }, []);
@@ -339,30 +416,34 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       );
       setMessage(`Saved ${openPath}`);
       await refreshTree();
+      if (isTexPath(openPath)) scheduleCompileOnSave();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not save.");
     } finally {
       setSaving(false);
     }
-  }, [activeTab, openPath, projectPath, refreshTree]);
+  }, [activeTab, openPath, projectPath, refreshTree, scheduleCompileOnSave]);
 
   const saveAll = useCallback(async () => {
     if (!projectPath) return;
     setSaving(true);
     try {
+      let savedTex = false;
       for (const tab of tabs) {
         if (!tabDirty(tab)) continue;
         await writeText(projectPath, tab.path, tab.content);
+        if (isTexPath(tab.path)) savedTex = true;
       }
       setTabs((current) => current.map((tab) => ({ ...tab, savedContent: tab.content })));
       setMessage("Saved all open files");
       await refreshTree();
+      if (savedTex) scheduleCompileOnSave();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not save all files.");
     } finally {
       setSaving(false);
     }
-  }, [projectPath, refreshTree, tabs]);
+  }, [projectPath, refreshTree, scheduleCompileOnSave, tabs]);
 
   const closeTab = useCallback(
     async (path: string) => {
@@ -452,6 +533,26 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [openPath, previewPath, projectPath, refreshTree],
   );
 
+  const cleanArtifacts = useCallback(async () => {
+    if (!projectPath) {
+      setMessage("Open a project before cleaning.");
+      return;
+    }
+    if (!window.confirm("Delete TeX auxiliary files (.aux, .log, .synctex.gz, …)? PDF is kept.")) {
+      return;
+    }
+    try {
+      const result = await cleanProject({
+        path: projectPath,
+        outputDir: settings.outputDir || null,
+      });
+      setMessage(`Cleaned ${result.count} auxiliary file(s).`);
+      await refreshTree();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Clean failed.");
+    }
+  }, [projectPath, refreshTree, settings.outputDir]);
+
   const compile = useCallback(async () => {
     if (!projectPath) {
       setMessage("Open a project before compiling.");
@@ -469,6 +570,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setSettingsOpen(true);
       return;
     }
+    if (buildStateRef.current === "running") {
+      setMessage("A build is already running.");
+      return;
+    }
+    if (compileOnSaveTimer.current) {
+      window.clearTimeout(compileOnSaveTimer.current);
+      compileOnSaveTimer.current = null;
+    }
     if (settings.shellEscape) {
       const ok = window.confirm(
         "shell-escape is ON. TeX may run external programs. Continue compiling?",
@@ -478,19 +587,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     if (anyDirty) await saveAll();
 
     const rootFile = settings.rootFile || openPath || "main.tex";
+    const engine = settings.engine;
     setBuildState("running");
     setBuildStartedAt(Date.now());
     setBuildLog("");
     setBuildResult(null);
     setDiagnostics([]);
     setBottomTab("log");
-    setMessage(`Compiling ${rootFile} with ${settings.engine}…`);
+    setMessage(`Compiling ${rootFile} with ${engine}…`);
 
     try {
       const started = await startCompile({
         projectPath,
         rootFile,
-        engine: settings.engine,
+        engine,
         shellEscape: settings.shellEscape,
         synctex: settings.synctex,
         outputDir: settings.outputDir || null,
@@ -504,8 +614,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           setBuildResult(result);
           setBuildLog(result.log);
           setDiagnostics(parseLatexLog(result.log));
-          setBuildState(result.ok ? "success" : result.signal ? "cancelled" : "failed");
+          const cancelled = Boolean(result.signal);
+          setBuildState(result.ok ? "success" : cancelled ? "cancelled" : "failed");
           setBuildStartedAt(null);
+          setBuildHistory((current) =>
+            appendBuildHistory(current, {
+              at: Date.now(),
+              engine,
+              rootFile,
+              ok: result.ok,
+              cancelled,
+              durationMs: result.durationMs,
+              code: result.code,
+            }),
+          );
           setMessage(
             result.ok
               ? `Build ok in ${(result.durationMs / 1000).toFixed(1)}s`
@@ -546,6 +668,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     texStatus,
   ]);
 
+  useEffect(() => {
+    compileRef.current = compile;
+  }, [compile]);
+
   const stopCompile = useCallback(async () => {
     try {
       await cancelCompile({
@@ -572,8 +698,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const jumpToLine = useCallback(
+    (line: number, path?: string) => {
+      const target = path ?? openPath;
+      if (!target) return;
+      setJumpRequest({ path: target, line, token: Date.now() });
+    },
+    [openPath],
+  );
+
   const clearJumpRequest = useCallback(() => setJumpRequest(null), []);
   const clearPdfFocus = useCallback(() => setPdfFocus(null), []);
+  const clearBuildHistory = useCallback(() => {
+    setBuildHistory([]);
+    persistBuildHistory([]);
+  }, []);
 
   const openPdfExternally = useCallback(async () => {
     if (!projectPath || !previewPath) {
@@ -665,15 +804,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       buildLog,
       buildStartedAt,
       buildResult,
+      buildHistory,
       diagnostics,
+      diagnosticFilter,
       sidebarCollapsed,
       settingsOpen,
       bottomTab,
       jumpRequest,
       pdfFocus,
+      cursorPosition,
       openProject,
       openProjectPicker,
       openRecent,
+      newProjectFromTemplate,
       openFile,
       closeTab,
       setActiveTab,
@@ -685,27 +828,35 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       createFolder: createFolderInProject,
       renameEntry,
       deleteEntry: deleteEntryInProject,
+      cleanArtifacts,
       compile,
       stopCompile,
       updateSettings,
       setSidebarCollapsed,
       setSettingsOpen,
       setBottomTab,
+      setDiagnosticFilter,
+      setCursorPosition,
       jumpToDiagnostic,
+      jumpToLine,
       clearJumpRequest,
       refreshTexStatus,
       openPdfExternally,
       syncTexForward,
       syncTexInverse,
       clearPdfFocus,
+      clearBuildHistory,
     }),
     [
       anyDirty,
       bottomTab,
+      buildHistory,
       buildLog,
       buildResult,
       buildStartedAt,
       buildState,
+      cleanArtifacts,
+      clearBuildHistory,
       clearJumpRequest,
       clearPdfFocus,
       closeTab,
@@ -713,12 +864,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       compile,
       createFileInProject,
       createFolderInProject,
+      cursorPosition,
       deleteEntryInProject,
+      diagnosticFilter,
       diagnostics,
       dirty,
       jumpRequest,
       jumpToDiagnostic,
+      jumpToLine,
       message,
+      newProjectFromTemplate,
       openContent,
       openFile,
       openPath,

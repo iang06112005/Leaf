@@ -32,6 +32,7 @@ dist-ssr
 *.synctex.gz
 *.bbl
 *.blg
+*.xdv
 tests/fixtures/**/*.pdf
 *.synctex(busy)
 

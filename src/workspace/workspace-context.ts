@@ -54,6 +54,7 @@ export type WorkspaceContextValue = {
   bottomTab: BottomTab;
   jumpRequest: { path: string; line: number; token: number } | null;
   pdfFocus: SynctexForwardResult | null;
+  lastPdfClick: { page: number; x: number; y: number } | null;
   cursorPosition: CursorPosition | null;
   openProject: (explicitPath?: string) => Promise<void>;
   openProjectPicker: () => Promise<void>;
@@ -70,7 +71,7 @@ export type WorkspaceContextValue = {
   createFolder: (relativePath: string) => Promise<void>;
   renameEntry: (from: string, to: string) => Promise<void>;
   deleteEntry: (target: string) => Promise<void>;
-  cleanArtifacts: () => Promise<void>;
+  cleanArtifacts: (opts?: { confirm?: boolean; quiet?: boolean }) => Promise<void>;
   compile: () => Promise<void>;
   stopCompile: () => Promise<void>;
   updateSettings: (patch: Partial<AppSettings>) => void;
@@ -86,6 +87,8 @@ export type WorkspaceContextValue = {
   openPdfExternally: () => Promise<void>;
   syncTexForward: (line: number, column?: number) => Promise<void>;
   syncTexInverse: (page: number, x: number, y: number) => Promise<void>;
+  rememberPdfClick: (page: number, x: number, y: number) => void;
+  syncTexInverseFromLastClick: () => Promise<void>;
   clearPdfFocus: () => void;
   clearBuildHistory: () => void;
 };

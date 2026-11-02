@@ -95,6 +95,21 @@ export function SettingsModal() {
             </span>
           </label>
 
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={settings.cleanAuxBeforeCompile}
+              onChange={(event) => updateSettings({ cleanAuxBeforeCompile: event.target.checked })}
+            />
+            <span>
+              Clean aux before compile
+              <span className="mt-1 block text-xs text-[var(--tf-muted)]">
+                Off by default. Deletes TeX auxiliaries (keeps PDF) right before each build.
+              </span>
+            </span>
+          </label>
+
           <label className="block space-y-1">
             <span className="text-[var(--tf-muted)]">Autosave delay (ms)</span>
             <input

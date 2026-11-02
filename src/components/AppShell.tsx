@@ -48,25 +48,26 @@ export function AppShell() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const meta = event.metaKey || event.ctrlKey;
-      if (meta && event.shiftKey && event.key.toLowerCase() === "f") {
+      if (!meta) return;
+      const key = event.key.toLowerCase();
+      // Leave Ctrl/Cmd+F and Ctrl/Cmd+H for Monaco find/replace.
+      if ((key === "f" || key === "h") && !event.shiftKey) return;
+      if (event.shiftKey && key === "f") {
         event.preventDefault();
         setFindOpen(true);
         return;
       }
-      if (
-        meta &&
-        (event.key.toLowerCase() === "k" || (event.shiftKey && event.key.toLowerCase() === "p"))
-      ) {
+      if (key === "k" || (event.shiftKey && key === "p")) {
         event.preventDefault();
         setPaletteOpen(true);
         return;
       }
-      if (meta && event.key === "Enter") {
+      if (event.key === "Enter") {
         event.preventDefault();
         if (buildState === "running") void stopCompile();
         else void compile();
       }
-      if (meta && event.key.toLowerCase() === "s") {
+      if (key === "s") {
         event.preventDefault();
         if (event.shiftKey) void saveAll();
         else void saveOpenFile();

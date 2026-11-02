@@ -87,6 +87,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [bottomTab, setBottomTab] = useState<BottomTab>("problems");
   const [jumpRequest, setJumpRequest] = useState<WorkspaceContextValue["jumpRequest"]>(null);
   const [pdfFocus, setPdfFocus] = useState<SynctexForwardResult | null>(null);
+  const [lastPdfClick, setLastPdfClick] = useState<{
+    page: number;
+    x: number;
+    y: number;
+  } | null>(null);
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   const jobIdRef = useRef<string | null>(null);
   const stopStreamRef = useRef<(() => void) | null>(null);
@@ -241,6 +246,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setBuildState("idle");
       setBuildStartedAt(null);
       setPdfFocus(null);
+      setLastPdfClick(null);
       setCursorPosition(null);
       setSettings((current) => pushRecentProject(current, opened.path));
 
@@ -550,25 +556,33 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [openPath, previewPath, projectPath, refreshTree],
   );
 
-  const cleanArtifacts = useCallback(async () => {
-    if (!projectPath) {
-      setMessage("Open a project before cleaning.");
-      return;
-    }
-    if (!window.confirm("Delete TeX auxiliary files (.aux, .log, .synctex.gz, …)? PDF is kept.")) {
-      return;
-    }
-    try {
-      const result = await cleanProject({
-        path: projectPath,
-        outputDir: settings.outputDir || null,
-      });
-      setMessage(`Cleaned ${result.count} auxiliary file(s).`);
-      await refreshTree();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Clean failed.");
-    }
-  }, [projectPath, refreshTree, settings.outputDir]);
+  const cleanArtifacts = useCallback(
+    async (opts?: { confirm?: boolean; quiet?: boolean }) => {
+      if (!projectPath) {
+        setMessage("Open a project before cleaning.");
+        return;
+      }
+      const needsConfirm = opts?.confirm !== false;
+      if (
+        needsConfirm &&
+        !window.confirm("Delete TeX auxiliary files (.aux, .log, .synctex.gz, …)? PDF is kept.")
+      ) {
+        return;
+      }
+      try {
+        const result = await cleanProject({
+          path: projectPath,
+          outputDir: settings.outputDir || null,
+        });
+        if (!opts?.quiet) setMessage(`Cleaned ${result.count} auxiliary file(s).`);
+        await refreshTree();
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Clean failed.");
+        throw error;
+      }
+    },
+    [projectPath, refreshTree, settings.outputDir],
+  );
 
   const compile = useCallback(async () => {
     if (!projectPath) {
@@ -602,6 +616,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (!ok) return;
     }
     if (anyDirty) await saveAll();
+
+    if (settings.cleanAuxBeforeCompile) {
+      try {
+        await cleanArtifacts({ confirm: false, quiet: true });
+      } catch {
+        return;
+      }
+    }
 
     const rootFile = settings.rootFile || openPath || "main.tex";
     const engine = settings.engine;
@@ -670,12 +692,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [
     anyDirty,
+    cleanArtifacts,
     companionOnline,
     loadPreview,
     openPath,
     projectPath,
     refreshTree,
     saveAll,
+    settings.cleanAuxBeforeCompile,
     settings.engine,
     settings.outputDir,
     settings.rootFile,
@@ -773,9 +797,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [openPath, previewPath, projectPath, settings.outputDir, settings.synctex, settings.texBinDir],
   );
 
+  const rememberPdfClick = useCallback((page: number, x: number, y: number) => {
+    setLastPdfClick({ page, x, y });
+  }, []);
+
   const syncTexInverse = useCallback(
     async (page: number, x: number, y: number) => {
       if (!projectPath || !previewPath || !settings.synctex) return;
+      rememberPdfClick(page, x, y);
       try {
         const result = await synctexInverse({
           path: projectPath,
@@ -796,8 +825,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         setMessage(error instanceof Error ? error.message : "Inverse SyncTeX failed.");
       }
     },
-    [previewPath, projectPath, settings.outputDir, settings.synctex, settings.texBinDir],
+    [
+      previewPath,
+      projectPath,
+      rememberPdfClick,
+      settings.outputDir,
+      settings.synctex,
+      settings.texBinDir,
+    ],
   );
+
+  const syncTexInverseFromLastClick = useCallback(async () => {
+    if (!lastPdfClick) {
+      setMessage("Click a point in the PDF preview first, then run Inverse SyncTeX.");
+      return;
+    }
+    await syncTexInverse(lastPdfClick.page, lastPdfClick.x, lastPdfClick.y);
+  }, [lastPdfClick, syncTexInverse]);
 
   const value = useMemo<WorkspaceContextValue>(
     () => ({
@@ -829,6 +873,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       bottomTab,
       jumpRequest,
       pdfFocus,
+      lastPdfClick,
       cursorPosition,
       openProject,
       openProjectPicker,
@@ -861,6 +906,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       openPdfExternally,
       syncTexForward,
       syncTexInverse,
+      rememberPdfClick,
+      syncTexInverseFromLastClick,
       clearPdfFocus,
       clearBuildHistory,
     }),
@@ -889,6 +936,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       jumpRequest,
       jumpToDiagnostic,
       jumpToLine,
+      lastPdfClick,
       message,
       newProjectFromTemplate,
       openContent,
@@ -905,6 +953,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       projectPath,
       refreshTexStatus,
       refreshTree,
+      rememberPdfClick,
       renameEntry,
       saveAll,
       saveOpenFile,
@@ -918,6 +967,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       stopCompile,
       syncTexForward,
       syncTexInverse,
+      syncTexInverseFromLastClick,
       tabs,
       texStatus,
       tree,

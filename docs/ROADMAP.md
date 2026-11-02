@@ -23,6 +23,7 @@ Done on this PR:
 - Clean aux, build history, cursor Ln/Col, diagnostic filters
 - Command palette + LaTeX snippets + jump-to-file
 - Hide aux in tree, find-in-files, local bib cite completion, Monarch LaTeX highlighting
+- Project-wide outline via \\input/\\include, inverse SyncTeX palette, clean-before-compile
 
 ## Out of scope
 

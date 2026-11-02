@@ -32,6 +32,7 @@ export function CommandPalette({ open, onClose, onFindInFiles }: CommandPaletteP
     openProjectPicker,
     cleanArtifacts,
     syncTexForward,
+    syncTexInverseFromLastClick,
     openPdfExternally,
   } = useWorkspace();
   const [query, setQuery] = useState("");
@@ -127,6 +128,14 @@ export function CommandPalette({ open, onClose, onFindInFiles }: CommandPaletteP
           },
         },
         {
+          id: "synctex-inverse",
+          group: "action" as const,
+          label: "SyncTeX inverse (last PDF click → source)",
+          run: () => {
+            void syncTexInverseFromLastClick();
+          },
+        },
+        {
           id: "open-pdf-os",
           group: "action" as const,
           label: "Open PDF in OS",
@@ -183,6 +192,7 @@ export function CommandPalette({ open, onClose, onFindInFiles }: CommandPaletteP
     settings.showAuxFiles,
     settings.theme,
     syncTexForward,
+    syncTexInverseFromLastClick,
     tree,
     updateSettings,
   ]);

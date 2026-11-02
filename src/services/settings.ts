@@ -18,6 +18,7 @@ export type AppSettings = {
   recentProjects: string[];
   theme: ThemeMode;
   showAuxFiles: boolean;
+  cleanAuxBeforeCompile: boolean;
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -37,6 +38,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   recentProjects: [],
   theme: "dark",
   showAuxFiles: false,
+  cleanAuxBeforeCompile: false,
 };
 
 const KEY = "texflow.settings.v1";
@@ -51,6 +53,7 @@ export function loadSettings(): AppSettings {
       ...parsed,
       compileOnSave: Boolean(parsed.compileOnSave),
       showAuxFiles: Boolean(parsed.showAuxFiles),
+      cleanAuxBeforeCompile: Boolean(parsed.cleanAuxBeforeCompile),
       recentProjects: Array.isArray(parsed.recentProjects) ? parsed.recentProjects : [],
     };
   } catch {

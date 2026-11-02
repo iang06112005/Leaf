@@ -25,10 +25,10 @@ npm run test:compile   # needs latexmk (+ xelatex for engine proof)
 2. Open absolute path to `tests/fixtures/article` (or use **Open** / **New** / Recent)
 3. Confirm Monaco loads `main.tex`, tabs work, outline jumps, autosave dirty→saved
 4. Compile (`Ctrl/Cmd+Enter`) → Log / History tabs; filter Problems by errors/warnings
-5. `Ctrl/Cmd+K` palette: SyncTeX, Open PDF in OS, find, jump to file, snippets
-6. `Ctrl/Cmd+Shift+F` find-in-files → click jumps to line; tree hides aux by default (Show aux)
-7. In `\cite{` use bib completion from project `.bib`; snippet triggers `sec`/`fig`/…
-8. Status `Ln/Col`; Clean; compile-on-save; `with-image` (xelatex if installed)
+5. Outline lists sections across `\input`/`\include`; click jumps file+line
+6. `Ctrl/Cmd+F` / `H` = Monaco find/replace; `Ctrl/Cmd+Shift+F` = project find-in-files
+7. Palette: SyncTeX forward/inverse (inverse needs a prior PDF click), Open PDF in OS
+8. Settings: clean aux before compile (off); tree Hide/Show aux; `\cite{` bib completion
 
 ## Companion unit tests
 

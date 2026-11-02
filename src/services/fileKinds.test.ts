@@ -10,7 +10,7 @@ describe("fileKinds", () => {
   });
 
   it("picks a monaco language for tex sources", () => {
-    expect(monacoLanguageFor("cap 1/main.tex")).toBe("plaintext");
+    expect(monacoLanguageFor("cap 1/main.tex")).toBe("latex");
     expect(monacoLanguageFor("README.md")).toBe("markdown");
   });
 });

@@ -25,8 +25,9 @@ npm run test:compile   # needs latexmk (+ xelatex for engine proof)
 2. Open absolute path to `tests/fixtures/article` (or use **Open** / **New** / Recent)
 3. Confirm Monaco loads `main.tex`, tabs work, outline jumps, autosave dirty→saved
 4. Compile (`Ctrl/Cmd+Enter`) → Log / History tabs; filter Problems by errors/warnings
-5. Toggle theme; SyncTeX; **Open in OS**; **Clean** aux; optional compile-on-save in Settings
-6. Status bar shows `Ln/Col`; try `with-image` (pdflatex always; xelatex if installed)
+5. `Ctrl/Cmd+K` palette: compile, theme, settings, jump to file, insert snippets
+6. In editor try triggers `sec`/`fig`/`eq`/`itz`/`cite` or Insert via palette
+7. Status `Ln/Col`; Clean aux; compile-on-save in Settings; `with-image` (xelatex if installed)
 
 ## Companion unit tests
 

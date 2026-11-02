@@ -36,8 +36,7 @@ export function monacoLanguageFor(path: string): string {
     case "sty":
     case "bst":
     case "bib":
-      // Monaco has no built-in LaTeX grammar in this milestone.
-      return "plaintext";
+      return "latex";
     case "md":
       return "markdown";
     case "json":

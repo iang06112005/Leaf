@@ -2,7 +2,9 @@ import Editor, { type OnMount } from "@monaco-editor/react";
 import { FileCode2, Save } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { editor as MonacoEditor } from "monaco-editor";
+import { setActiveEditor } from "../services/editorBridge";
 import { monacoLanguageFor } from "../services/fileKinds";
+import { ensureLatexLanguage } from "../services/latexLanguage";
 import { useWorkspace } from "../workspace/useWorkspace";
 import { EditorTabs } from "./EditorTabs";
 import { Panel } from "./ui/Panel";
@@ -23,8 +25,10 @@ export function EditorPane() {
   } = useWorkspace();
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 
-  const onMount: OnMount = (editor) => {
+  const onMount: OnMount = (editor, monaco) => {
+    ensureLatexLanguage(monaco);
     editorRef.current = editor;
+    setActiveEditor(editor);
     const syncCursor = () => {
       const position = editor.getPosition();
       if (!position) {
@@ -35,6 +39,12 @@ export function EditorPane() {
     };
     syncCursor();
     editor.onDidChangeCursorPosition(syncCursor);
+    editor.onDidDispose(() => {
+      if (editorRef.current === editor) {
+        editorRef.current = null;
+        setActiveEditor(null);
+      }
+    });
   };
 
   useEffect(() => {
@@ -112,6 +122,8 @@ export function EditorPane() {
                 scrollBeyondLastLine: false,
                 wordWrap: "on",
                 tabSize: 2,
+                suggestOnTriggerCharacters: true,
+                quickSuggestions: true,
               }}
             />
           </div>

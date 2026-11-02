@@ -1,4 +1,5 @@
 import {
+  Command,
   FilePlus,
   FolderOpen,
   Moon,
@@ -13,7 +14,11 @@ import {
 import { useEffect, useState } from "react";
 import { useWorkspace } from "../workspace/useWorkspace";
 
-export function Toolbar() {
+type ToolbarProps = {
+  onOpenPalette?: () => void;
+};
+
+export function Toolbar({ onOpenPalette }: ToolbarProps) {
   const {
     companionOnline,
     projectName,
@@ -220,6 +225,15 @@ export function Toolbar() {
       >
         {!companionOnline ? "Companion offline" : texStatus?.ok ? "TeX ready" : "TeX missing"}
       </span>
+
+      <button
+        type="button"
+        className="rounded p-1.5 hover:bg-[var(--tf-accent)]"
+        title="Command palette (Ctrl/Cmd+K)"
+        onClick={() => onOpenPalette?.()}
+      >
+        <Command className="size-4" aria-hidden="true" />
+      </button>
 
       <button
         type="button"

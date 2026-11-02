@@ -21,6 +21,7 @@ Done on this PR:
 - Image fixture + xelatex compile smoke (skipped in CI when XeTeX missing)
 - New project from Article template, compile-on-save, section outline
 - Clean aux, build history, cursor Ln/Col, diagnostic filters
+- Command palette + LaTeX snippets + jump-to-file
 
 ## Out of scope
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorkspace } from "../workspace/useWorkspace";
+import { CommandPalette } from "./CommandPalette";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { EditorPane } from "./EditorPane";
 import { PreviewPane } from "./PreviewPane";
@@ -14,6 +15,7 @@ export function AppShell() {
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [previewWidth, setPreviewWidth] = useState(420);
   const [diagHeight, setDiagHeight] = useState(220);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const dragging = useRef<"sidebar" | "preview" | "diag" | null>(null);
 
   const onMouseMove = useCallback((event: MouseEvent) => {
@@ -44,6 +46,14 @@ export function AppShell() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const meta = event.metaKey || event.ctrlKey;
+      if (
+        meta &&
+        (event.key.toLowerCase() === "k" || (event.shiftKey && event.key.toLowerCase() === "p"))
+      ) {
+        event.preventDefault();
+        setPaletteOpen(true);
+        return;
+      }
       if (meta && event.key === "Enter") {
         event.preventDefault();
         if (buildState === "running") void stopCompile();
@@ -65,7 +75,7 @@ export function AppShell() {
 
   return (
     <div className="grid h-full min-h-0 grid-rows-[2.75rem_minmax(0,1fr)_1.75rem] bg-[var(--tf-bg)] text-[var(--tf-text)] antialiased">
-      <Toolbar />
+      <Toolbar onOpenPalette={() => setPaletteOpen(true)} />
       <div
         className="grid min-h-0"
         style={{ gridTemplateRows: `minmax(0,1fr) 6px ${diagHeight}px` }}
@@ -105,6 +115,7 @@ export function AppShell() {
       </div>
       <StatusBar />
       <SettingsModal />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

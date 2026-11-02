@@ -273,3 +273,20 @@ export function cleanProject(body: { path: string; outputDir?: string | null }) 
     body: JSON.stringify(body),
   });
 }
+
+export type SearchMatch = {
+  file: string;
+  line: number;
+  column: number;
+  preview: string;
+};
+
+export function searchProjectFiles(body: { path: string; query: string; maxMatches?: number }) {
+  return request<{ matches: SearchMatch[]; truncated: boolean; query: string }>(
+    "/api/project/search",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
+}

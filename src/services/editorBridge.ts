@@ -11,6 +11,12 @@ export function getActiveEditor(): MonacoEditor.IStandaloneCodeEditor | null {
   return activeEditor;
 }
 
+export function getEditorCursor(): { line: number; column: number } | null {
+  const position = activeEditor?.getPosition();
+  if (!position) return null;
+  return { line: position.lineNumber, column: position.column };
+}
+
 /** Insert a LaTeX snippet at the cursor using Monaco's snippet controller when available. */
 export function insertLatexSnippet(idOrTrigger: string): boolean {
   const snippet = findSnippet(idOrTrigger);

@@ -20,6 +20,7 @@ import {
 import { openPathInOs, openProjectFileInOs, pdfAbsolutePath } from "./lib/open.mjs";
 import { assertAbsolutePath } from "./lib/paths.mjs";
 import { synctexForward, synctexInverse } from "./lib/synctex.mjs";
+import { searchProject } from "./lib/search.mjs";
 import { createProjectFromTemplate, TEMPLATES } from "./lib/template.mjs";
 import { detectTeX } from "./lib/tex.mjs";
 
@@ -364,6 +365,16 @@ async function handle(req, res) {
       const projectPath = assertAbsolutePath(body.path || "");
       const result = await cleanProjectArtifacts(projectPath, {
         outputDir: body.outputDir || null,
+      });
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/project/search") {
+      const body = await readJson(req);
+      const projectPath = assertAbsolutePath(body.path || "");
+      const result = await searchProject(projectPath, body.query || "", {
+        maxMatches: Number(body.maxMatches) || 200,
       });
       sendJson(res, 200, result);
       return;

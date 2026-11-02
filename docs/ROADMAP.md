@@ -22,6 +22,7 @@ Done on this PR:
 - New project from Article template, compile-on-save, section outline
 - Clean aux, build history, cursor Ln/Col, diagnostic filters
 - Command palette + LaTeX snippets + jump-to-file
+- Hide aux in tree, find-in-files, local bib cite completion, Monarch LaTeX highlighting
 
 ## Out of scope
 

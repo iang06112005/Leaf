@@ -31,9 +31,11 @@ import {
   persistBuildHistory,
   type BuildHistoryEntry,
 } from "../services/buildHistory";
+import { parseBibEntries } from "../services/bib";
+import { setBibEntries } from "../services/bibCache";
 import { parseLatexLog, type Diagnostic } from "../services/diagnostics";
 import { isPdfProjectFile, isTextProjectFile } from "../services/fileKinds";
-import { findPreferredPdf, findPreferredTex } from "../services/filesystem";
+import { findPreferredPdf, findPreferredTex, flattenFiles } from "../services/filesystem";
 import {
   loadSettings,
   pushRecentProject,
@@ -50,15 +52,6 @@ import {
   type WorkspaceContextValue,
   type WorkspaceStatus,
 } from "./workspace-context";
-
-function flattenFiles(nodes: CompanionTreeNode[]): { name: string; path: string }[] {
-  const files: { name: string; path: string }[] = [];
-  for (const node of nodes) {
-    if (node.kind === "file") files.push(node);
-    else files.push(...flattenFiles(node.children));
-  }
-  return files;
-}
 
 function tabDirty(tab: EditorTab): boolean {
   return tab.content !== tab.savedContent;
@@ -199,6 +192,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (pollRef.current) window.clearInterval(pollRef.current);
     };
   }, [companionOnline, projectPath]);
+
+  useEffect(() => {
+    if (!projectPath) {
+      setBibEntries([]);
+      return;
+    }
+    const bibFiles = flattenFiles(tree).filter((file) => /\.bib$/i.test(file.path));
+    let cancelled = false;
+    void (async () => {
+      const entries = [];
+      for (const file of bibFiles) {
+        try {
+          const result = await readText(projectPath, file.path);
+          entries.push(...parseBibEntries(result.content, file.path));
+        } catch {
+          // ignore unreadable bib
+        }
+      }
+      if (!cancelled) setBibEntries(entries);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectPath, tree]);
 
   const scheduleCompileOnSave = useCallback(() => {
     if (!settings.compileOnSave) return;

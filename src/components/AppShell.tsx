@@ -3,6 +3,7 @@ import { useWorkspace } from "../workspace/useWorkspace";
 import { CommandPalette } from "./CommandPalette";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { EditorPane } from "./EditorPane";
+import { FindInFiles } from "./FindInFiles";
 import { PreviewPane } from "./PreviewPane";
 import { SettingsModal } from "./SettingsModal";
 import { Sidebar } from "./Sidebar";
@@ -16,6 +17,7 @@ export function AppShell() {
   const [previewWidth, setPreviewWidth] = useState(420);
   const [diagHeight, setDiagHeight] = useState(220);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
   const dragging = useRef<"sidebar" | "preview" | "diag" | null>(null);
 
   const onMouseMove = useCallback((event: MouseEvent) => {
@@ -46,6 +48,11 @@ export function AppShell() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const meta = event.metaKey || event.ctrlKey;
+      if (meta && event.shiftKey && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setFindOpen(true);
+        return;
+      }
       if (
         meta &&
         (event.key.toLowerCase() === "k" || (event.shiftKey && event.key.toLowerCase() === "p"))
@@ -115,7 +122,15 @@ export function AppShell() {
       </div>
       <StatusBar />
       <SettingsModal />
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onFindInFiles={() => {
+          setPaletteOpen(false);
+          setFindOpen(true);
+        }}
+      />
+      <FindInFiles open={findOpen} onClose={() => setFindOpen(false)} />
     </div>
   );
 }

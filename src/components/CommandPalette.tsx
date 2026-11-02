@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { insertLatexSnippet } from "../services/editorBridge";
+import { getEditorCursor, insertLatexSnippet } from "../services/editorBridge";
 import { isPdfProjectFile, isTextProjectFile } from "../services/fileKinds";
 import { flattenFiles } from "../services/filesystem";
 import { filterSnippets } from "../services/snippets";
@@ -16,9 +16,10 @@ type PaletteItem = {
 type CommandPaletteProps = {
   open: boolean;
   onClose: () => void;
+  onFindInFiles?: () => void;
 };
 
-export function CommandPalette({ open, onClose }: CommandPaletteProps) {
+export function CommandPalette({ open, onClose, onFindInFiles }: CommandPaletteProps) {
   const {
     tree,
     compile,
@@ -30,6 +31,8 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     openFile,
     openProjectPicker,
     cleanArtifacts,
+    syncTexForward,
+    openPdfExternally,
   } = useWorkspace();
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
@@ -107,6 +110,36 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             void cleanArtifacts();
           },
         },
+        {
+          id: "find-in-files",
+          group: "action" as const,
+          label: "Find in files…",
+          hint: "Ctrl/Cmd+Shift+F",
+          run: () => onFindInFiles?.(),
+        },
+        {
+          id: "synctex-forward",
+          group: "action" as const,
+          label: "SyncTeX forward (editor → PDF)",
+          run: () => {
+            const cursor = getEditorCursor();
+            void syncTexForward(cursor?.line ?? 1, cursor?.column ?? 1);
+          },
+        },
+        {
+          id: "open-pdf-os",
+          group: "action" as const,
+          label: "Open PDF in OS",
+          run: () => {
+            void openPdfExternally();
+          },
+        },
+        {
+          id: "toggle-aux",
+          group: "action" as const,
+          label: settings.showAuxFiles ? "Hide aux files in tree" : "Show aux files in tree",
+          run: () => updateSettings({ showAuxFiles: !settings.showAuxFiles }),
+        },
       ] satisfies PaletteItem[]
     ).filter((item) => !q || item.label.toLowerCase().includes(q) || item.id.includes(q));
 
@@ -138,14 +171,18 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   }, [
     cleanArtifacts,
     compile,
+    onFindInFiles,
     openFile,
+    openPdfExternally,
     openProjectPicker,
     query,
     saveAll,
     saveOpenFile,
     setSettingsOpen,
     settings.compileOnSave,
+    settings.showAuxFiles,
     settings.theme,
+    syncTexForward,
     tree,
     updateSettings,
   ]);

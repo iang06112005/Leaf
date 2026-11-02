@@ -24,7 +24,7 @@ npm run dev
 
 Open a project with an **absolute path**, the toolbar **Open** button (native folder dialog when available), or **Recent**. If the native dialog is unavailable, paste an absolute path when prompted.
 
-Shortcuts: `Ctrl/Cmd+K` (or `Ctrl/Cmd+Shift+P`) command palette, `Ctrl/Cmd+Enter` compile (or stop while running), `Ctrl/Cmd+S` save, `Ctrl/Cmd+Shift+S` save all. In `.tex` files, snippet triggers `sec` / `fig` / `eq` / `itz` / `cite` (completion).
+Shortcuts: `Ctrl/Cmd+K` (or `Ctrl/Cmd+Shift+P`) command palette, `Ctrl/Cmd+Shift+F` find in files, `Ctrl/Cmd+Enter` compile (or stop while running), `Ctrl/Cmd+S` save, `Ctrl/Cmd+Shift+S` save all. In `.tex` files: Monarch highlighting, snippet triggers `sec`/`fig`/`eq`/`itz`/`cite`, and `\cite{` completion from project `.bib` files. Aux files are hidden in the tree by default.
 
 ## Checks
 

@@ -1,4 +1,16 @@
-import { Eraser, FilePlus2, FolderPlus, FolderTree, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Eraser,
+  Eye,
+  EyeOff,
+  FilePlus2,
+  FolderPlus,
+  FolderTree,
+  Pencil,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import { useMemo } from "react";
+import { filterTreeHideAux } from "../services/auxFiles";
 import { useWorkspace } from "../workspace/useWorkspace";
 import { FileTree } from "./FileTree";
 import { OutlinePanel } from "./OutlinePanel";
@@ -19,7 +31,14 @@ export function Sidebar() {
     renameEntry,
     deleteEntry,
     cleanArtifacts,
+    settings,
+    updateSettings,
   } = useWorkspace();
+
+  const visibleTree = useMemo(
+    () => (settings.showAuxFiles ? tree : filterTreeHideAux(tree)),
+    [settings.showAuxFiles, tree],
+  );
 
   return (
     <Panel
@@ -108,13 +127,31 @@ export function Sidebar() {
               <Eraser className="size-3" aria-hidden="true" />
               Clean
             </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded border border-[var(--tf-border)] px-2 py-1 text-xs hover:bg-[var(--tf-accent)]"
+              title={
+                settings.showAuxFiles
+                  ? "Hide aux/build clutter"
+                  : "Show aux/build clutter (.aux, .log, …)"
+              }
+              onClick={() => updateSettings({ showAuxFiles: !settings.showAuxFiles })}
+            >
+              {settings.showAuxFiles ? (
+                <EyeOff className="size-3" aria-hidden="true" />
+              ) : (
+                <Eye className="size-3" aria-hidden="true" />
+              )}
+              {settings.showAuxFiles ? "Hide aux" : "Show aux"}
+            </button>
           </div>
           <p className="truncate text-xs font-medium uppercase tracking-wide text-[var(--tf-muted)]">
             {projectName}
+            {!settings.showAuxFiles ? " · aux hidden" : ""}
           </p>
           <div className="min-h-0 flex-1 overflow-auto">
             <FileTree
-              nodes={tree}
+              nodes={visibleTree}
               activePath={openPath}
               previewPath={previewPath}
               onOpen={(path) => {

@@ -1,0 +1,22 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\title{TexFlow Article Fixture}
+\author{TexFlow}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+\label{sec:intro}
+This multi-file fixture exercises bibliography support and an included chapter.
+See~\cite{knuth1984} and section~\ref{sec:chapter}.
+
+\input{chapters/body}
+
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}

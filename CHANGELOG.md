@@ -4,7 +4,8 @@
 
 ### Added
 
-- Local Node companion for project I/O and `latexmk` (localhost only).
+- Tauri 2 desktop host (Rust) wrapping the React UI — preferred Windows path (`npm run tauri:dev` / `tauri:build`).
+- Local Node companion for project I/O and `latexmk` (localhost only; browser/dev fallback).
 - Compile toolbar: engine select, Compile/Stop, TeX status, settings.
 - Autosave, dirty indicator, create/rename/delete files and folders.
 - Diagnostics panel with click-to-source and build log.

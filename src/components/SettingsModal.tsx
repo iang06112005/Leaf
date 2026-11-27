@@ -184,7 +184,7 @@ export function SettingsModal() {
             ) : (
               <p className="text-amber-200">
                 {texStatus?.installHint ??
-                  "Start the companion (`npm run companion`) and install TeX Live so latexmk is on PATH."}
+                  "Install TeX Live so latexmk is on PATH (desktop: restart TexFlow after installing; browser: also run npm run companion)."}
               </p>
             )}
             {texStatus ? (

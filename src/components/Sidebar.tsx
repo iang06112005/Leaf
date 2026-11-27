@@ -48,8 +48,8 @@ export function Sidebar() {
     >
       {!companionOnline ? (
         <p className="mb-3 text-sm text-amber-600">
-          Companion offline. Run <code className="font-semibold">npm run dev</code> so Open / Save /
-          Compile work.
+          Host offline. Use <code className="font-semibold">npm run tauri:dev</code> (desktop) or{" "}
+          <code className="font-semibold">npm run dev</code> (browser + Node companion).
         </p>
       ) : null}
 

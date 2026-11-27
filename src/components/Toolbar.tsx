@@ -223,7 +223,7 @@ export function Toolbar({ onOpenPalette }: ToolbarProps) {
         }`}
         title={texStatus?.installHint}
       >
-        {!companionOnline ? "Companion offline" : texStatus?.ok ? "TeX ready" : "TeX missing"}
+        {!companionOnline ? "Host offline" : texStatus?.ok ? "TeX ready" : "TeX missing"}
       </span>
 
       <button

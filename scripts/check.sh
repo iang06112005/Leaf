@@ -17,6 +17,13 @@ npm run typecheck
 echo "== unit tests =="
 npm test
 
+if command -v cargo >/dev/null 2>&1; then
+  echo "== rust host tests =="
+  npm run test:rust
+else
+  echo "== rust host tests skipped (cargo not installed) =="
+fi
+
 echo "== production build =="
 npm run build
 

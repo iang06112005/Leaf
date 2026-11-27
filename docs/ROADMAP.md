@@ -8,11 +8,11 @@ Done: Vite/React shell, docs, CI.
 
 Done: open project, Monaco, PDF.js preview.
 
-## Milestone 2 / Prism-like loop (this branch)
+## Milestone 2 / Prism-like loop
 
-Done on this PR:
+Done on the foundation PR:
 
-- Node companion compile host
+- Node companion compile host (browser/dev)
 - latexmk engines, cancel, streaming log, diagnostics
 - Autosave, CRUD files/folders, tree refresh polling
 - Settings, toolbar, resizable panels, dark/light themes
@@ -24,6 +24,12 @@ Done on this PR:
 - Command palette + LaTeX snippets + jump-to-file
 - Hide aux in tree, find-in-files, local bib cite completion, Monarch LaTeX highlighting
 - Project-wide outline via \\input/\\include, inverse SyncTeX palette, clean-before-compile
+- Reopen last project on boot when the path still exists
+
+## Milestone 3 — Desktop host
+
+- Tauri 2 wraps the React UI; Rust owns FS + latexmk (preferred Windows UX)
+- Node companion kept as HTTP fallback for `npm run dev` / CI
 
 ## Out of scope
 

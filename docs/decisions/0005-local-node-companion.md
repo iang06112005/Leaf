@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted for browser/dev fallback. Primary end-user desktop path is [ADR 0006](0006-tauri-desktop-host.md) (Tauri 2).
 
 ## Context
 

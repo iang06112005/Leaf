@@ -37,6 +37,7 @@ import { setBibEntries } from "../services/bibCache";
 import { parseLatexLog, type Diagnostic } from "../services/diagnostics";
 import { isPdfProjectFile, isTextProjectFile } from "../services/fileKinds";
 import { findPreferredPdf, findPreferredTex, flattenFiles } from "../services/filesystem";
+import { isDesktopHost } from "../services/host";
 import {
   dropProjectFromHistory,
   loadSettings,
@@ -45,6 +46,12 @@ import {
   saveSettings,
   type AppSettings,
 } from "../services/settings";
+
+function hostOfflineMessage(): string {
+  return isDesktopHost()
+    ? "Desktop host is unavailable. Restart TexFlow."
+    : "Companion is offline. Prefer `npm run tauri:dev` for the desktop app, or `npm run dev` / `npm run companion` for the browser + Node host.";
+}
 import {
   WorkspaceContext,
   type BottomTab,
@@ -326,9 +333,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setMessage("Opening project…");
       try {
         if (!(await companionHealth())) {
-          throw new Error(
-            "Companion is offline. Run npm run dev (or npm run companion) so latexmk and project I/O work.",
-          );
+          throw new Error(hostOfflineMessage());
         }
         if (anyDirty) {
           const proceed = window.confirm("You have unsaved changes. Open another project anyway?");
@@ -355,7 +360,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setMessage("Opening folder picker…");
     try {
       if (!(await companionHealth())) {
-        throw new Error("Companion offline — start npm run companion.");
+        throw new Error(hostOfflineMessage());
       }
       if (anyDirty) {
         const proceed = window.confirm("You have unsaved changes. Open another project anyway?");
@@ -398,7 +403,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setMessage("Creating project from template…");
     try {
       if (!(await companionHealth())) {
-        throw new Error("Companion offline — start npm run companion.");
+        throw new Error(hostOfflineMessage());
       }
       if (anyDirty) {
         const proceed = window.confirm("You have unsaved changes. Create a new project anyway?");
@@ -638,7 +643,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return;
     }
     if (!companionOnline) {
-      setMessage("Companion offline — start npm run companion.");
+      setMessage(hostOfflineMessage());
       return;
     }
     if (!texStatus?.ok) {

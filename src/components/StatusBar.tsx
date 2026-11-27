@@ -16,7 +16,7 @@ export function StatusBar() {
   } = useWorkspace();
 
   const readyLabel = !companionOnline
-    ? "Companion offline"
+    ? "Host offline"
     : status === "loading"
       ? "Opening…"
       : buildState === "running"
